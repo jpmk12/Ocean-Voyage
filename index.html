@@ -55,7 +55,20 @@
     width: 0%;
     transition: width 0.2s;
   }
-  #shop {
+  #pets-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 13px;
+    align-items: center;
+  }
+  .pet-badge {
+    background: rgba(255,255,255,0.25);
+    border-radius: 8px;
+    padding: 2px 6px;
+    border: 1px solid #ffe082;
+  }
+  #shop, #minigame-overlay {
     position: fixed;
     top: 50%;
     left: 50%;
@@ -65,12 +78,12 @@
     border-radius: 20px;
     padding: 24px;
     width: 90%;
-    max-width: 480px;
+    max-width: 520px;
     display: none;
     box-shadow: 0 10px 40px rgba(0,0,0,0.6);
     z-index: 10;
   }
-  #shop h2 {
+  #shop h2, #minigame-overlay h2 {
     text-align: center;
     margin-bottom: 12px;
     color: #ffe082;
@@ -97,7 +110,7 @@
   }
   .upgrade-name { font-size: 18px; font-weight: bold; }
   .upgrade-level { font-size: 14px; opacity: 0.8; }
-  .upgrade button {
+  .upgrade button, .shop-action {
     background: #ffb300;
     color: #3e2723;
     border: none;
@@ -109,32 +122,26 @@
     font-family: inherit;
     box-shadow: 0 3px 0 #e65100;
   }
-  .upgrade button:hover:not(:disabled) { background: #ffd54f; }
-  .upgrade button:disabled {
+  .upgrade button:hover:not(:disabled), .shop-action:hover:not(:disabled) { background: #ffd54f; }
+  .upgrade button:disabled, .shop-action:disabled {
     background: #757575;
     color: #bdbdbd;
     box-shadow: 0 3px 0 #424242;
     cursor: not-allowed;
   }
-  #shop .close-hint {
-    text-align: center;
-    margin-top: 8px;
-    font-size: 13px;
-    opacity: 0.85;
+  .shop-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 14px;
   }
-  #shop .close-hint button {
+  .shop-action.sail {
     background: #4caf50;
     color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 18px;
-    font-weight: bold;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 15px;
     box-shadow: 0 3px 0 #2e7d32;
-    margin-top: 6px;
   }
+  .shop-action.sail:hover { background: #66bb6a; }
   #message {
     position: fixed;
     bottom: 30px;
@@ -154,6 +161,27 @@
     max-width: 90%;
   }
   #message.show { opacity: 1; }
+  #toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: linear-gradient(135deg, #ffd54f, #ff8a00);
+    border: 4px solid #fff;
+    border-radius: 18px;
+    padding: 24px 32px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #3e2723;
+    text-shadow: 1px 1px 0 #fff;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.4s cubic-bezier(.34,1.56,.64,1);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    text-align: center;
+    z-index: 15;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   #start-screen {
     position: fixed;
     inset: 0;
@@ -174,7 +202,7 @@
   }
   #start-screen p {
     font-size: 18px;
-    max-width: 500px;
+    max-width: 540px;
     margin-bottom: 18px;
     line-height: 1.5;
   }
@@ -186,6 +214,7 @@
     margin-bottom: 22px;
     font-size: 16px;
     line-height: 1.7;
+    max-width: 540px;
   }
   #start-btn {
     background: #ffb300;
@@ -201,6 +230,50 @@
   }
   #start-btn:hover { background: #ffd54f; }
   #start-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #e65100; }
+
+  /* Mini-game overlay */
+  #minigame-overlay { width: 92%; max-width: 600px; }
+  #minigame-canvas {
+    display: block;
+    width: 100%;
+    height: 320px;
+    background: linear-gradient(180deg, #81d4fa, #0277bd);
+    border-radius: 14px;
+    border: 3px solid #ffe082;
+  }
+  #minigame-info {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 4px;
+    font-weight: bold;
+    font-size: 16px;
+  }
+  #minigame-instructions {
+    text-align: center;
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: #fff8e1;
+  }
+
+  /* Befriend prompt */
+  #befriend-prompt {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 60, 90, 0.85);
+    border: 2px solid #ffe082;
+    border-radius: 14px;
+    padding: 10px 20px;
+    font-weight: bold;
+    font-size: 16px;
+    pointer-events: auto;
+    display: none;
+    z-index: 5;
+    cursor: pointer;
+    text-shadow: 1px 1px 0 #003c5a;
+  }
+  #befriend-prompt:hover { background: rgba(0, 90, 130, 0.95); }
 </style>
 </head>
 <body>
@@ -212,33 +285,47 @@
     <div>Gold: <span id="gold">0</span></div>
     <div style="font-size:14px;margin-top:2px;">Cargo: <span id="cargo">0</span> / <span id="cargo-max">3</span></div>
     <div id="cargo-bar"><div id="cargo-fill"></div></div>
+    <div id="pets-row"></div>
   </div>
   <div class="panel" style="text-align:right;">
-    <div style="font-size:14px;">Sail back to your island</div>
-    <div style="font-size:14px;">to sell items and upgrade!</div>
+    <div style="font-size:14px;">Sail to an island to</div>
+    <div style="font-size:14px;">sell, upgrade, &amp; play!</div>
   </div>
 </div>
 
 <div id="shop">
-  <h2>Island Shop</h2>
-  <p class="tagline">Welcome home! Upgrade your boat for bigger adventures!</p>
+  <h2 id="shop-title">Island Shop</h2>
+  <p class="tagline" id="shop-tagline">Welcome!</p>
   <div id="upgrades"></div>
-  <div class="close-hint">
-    <button id="close-shop">Set Sail!</button>
+  <div class="shop-actions" id="shop-actions"></div>
+</div>
+
+<div id="minigame-overlay">
+  <h2 id="minigame-title">Mini-Game</h2>
+  <p id="minigame-instructions"></p>
+  <canvas id="minigame-canvas" width="540" height="320"></canvas>
+  <div id="minigame-info">
+    <span>Score: <span id="mg-score">0</span></span>
+    <span>Time: <span id="mg-time">0</span></span>
+  </div>
+  <div class="shop-actions">
+    <button class="shop-action sail" id="mg-quit">Done</button>
   </div>
 </div>
 
 <div id="message"></div>
+<div id="toast"></div>
+<div id="befriend-prompt">Tap to befriend! <span style="opacity:0.7;font-size:13px">(or press F)</span></div>
 
 <div id="start-screen">
   <h1>Ocean Voyage</h1>
-  <p>Sail your Polynesian boat across the bright blue sea, collect starfish, shells, and pearls, then bring them home to your island!</p>
+  <p>Sail your Polynesian canoe across the bright blue ocean. Collect treasures, befriend dolphins and turtles, discover hidden islands, and play games to earn gold!</p>
   <div class="controls">
     <b>Controls</b><br/>
-    Arrow keys or WASD to sail<br/>
-    Click/tap the water to sail there<br/>
-    Touch items to scoop them up<br/>
-    Return to your island to sell &amp; upgrade
+    Arrow keys or WASD to sail &middot; Click/tap the water to sail there<br/>
+    Glide over items to scoop them up<br/>
+    Sail near wild dolphins or turtles &amp; press <b>F</b> (or tap them) to befriend<br/>
+    Return to any island to sell, upgrade, or play a mini-game
   </div>
   <button id="start-btn">Start Voyage!</button>
 </div>
@@ -255,83 +342,153 @@
   window.addEventListener('resize', resize);
   resize();
 
-  // World is larger than viewport — camera follows the boat.
-  const WORLD_W = 2400;
-  const WORLD_H = 1800;
+  const WORLD_W = 3600;
+  const WORLD_H = 2800;
 
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const dist2 = (a, b) => { const dx=a.x-b.x, dy=a.y-b.y; return dx*dx+dy*dy; };
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  // -------- Islands --------
+  const islands = [
+    {
+      id: 'home', x: 400, y: 400, r: 110,
+      name: 'Home Island',
+      tagline: 'Sell your treasures and upgrade your boat!',
+      hasShop: true,
+      minigame: 'coconut',
+      sand: '#fff59d', grass: '#81c784', innerGrass: '#4caf50',
+      unlocked: true,
+    },
+    {
+      id: 'reef', x: 3100, y: 700, r: 95,
+      name: 'Reef Atoll',
+      tagline: 'A coral paradise — try the fishing game!',
+      minigame: 'fishing',
+      sand: '#fff8e1', grass: '#80cbc4', innerGrass: '#26a69a',
+      unlocked: true,
+      itemBoost: { shell: 4, coral: 4 },
+    },
+    {
+      id: 'volcano', x: 700, y: 2300, r: 105,
+      name: 'Volcano Island',
+      tagline: 'Hot lava! Rare golden conches wash up here.',
+      sand: '#3e2723', grass: '#bf360c', innerGrass: '#d84315',
+      isVolcano: true,
+      unlocked: false,
+      requires: { speed: 2 },
+      itemBoost: { golden_conch: 8, starfish: 2 },
+    },
+    {
+      id: 'pearl', x: 3200, y: 2400, r: 100,
+      name: 'Pearl Atoll',
+      tagline: 'Sparkling waters full of pearls and treasure!',
+      sand: '#f3e5f5', grass: '#ce93d8', innerGrass: '#ab47bc',
+      unlocked: false,
+      requires: { range: 2 },
+      itemBoost: { pearl: 5, treasure_chest: 4 },
+    },
+  ];
+  function islandById(id) { return islands.find(i => i.id === id); }
+
+  // -------- State --------
   const state = {
     gold: 0,
     cargo: [],
     upgrades: {
-      cargo:  { level: 0, name: 'Cargo Hold',  baseCost: 25, desc: '+2 cargo slots' },
-      speed:  { level: 0, name: 'Faster Sail', baseCost: 30, desc: '+25% speed' },
-      hull:   { level: 0, name: 'Stronger Hull', baseCost: 50, desc: 'Bigger, sturdier boat' },
-      range:  { level: 0, name: 'Lucky Net',  baseCost: 40, desc: 'Wider collection range' },
+      cargo:  { level: 0, name: 'Cargo Hold',   baseCost: 25, desc: '+2 cargo slots' },
+      speed:  { level: 0, name: 'Faster Sail',  baseCost: 30, desc: '+25% speed' },
+      hull:   { level: 0, name: 'Stronger Hull',baseCost: 50, desc: 'Bigger, sturdier boat' },
+      range:  { level: 0, name: 'Lucky Net',    baseCost: 40, desc: 'Wider collection range' },
     },
+    pets: { dolphin: false, turtle: false },
     items: [],
     clouds: [],
     waves: [],
     fishes: [],
     sparkles: [],
-    nearIsland: false,
+    wildCreatures: [], // dolphins/turtles to befriend
+    nearIsland: null,
     shopOpen: false,
+    miniGameOpen: false,
     started: false,
-    target: null, // click-to-move target
+    target: null,
+    nearWild: null,
+    rareSpawnTimer: 600, // ~10s
   };
 
-  // Home island
-  const island = { x: 300, y: 300, r: 110 };
-
-  // Helpers
-  const rand = (a, b) => a + Math.random() * (b - a);
-  const dist2 = (a, b) => { const dx=a.x-b.x, dy=a.y-b.y; return dx*dx+dy*dy; };
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-
-  function cargoMax() { return 3 + state.upgrades.cargo.level * 2; }
-  function speedMax() { return 2.6 * Math.pow(1.25, state.upgrades.speed.level); }
+  function cargoMax() { return 3 + state.upgrades.cargo.level * 2 + (state.pets.turtle ? 2 : 0); }
+  function speedMax() {
+    let s = 2.6 * Math.pow(1.25, state.upgrades.speed.level);
+    if (state.pets.dolphin) s *= 1.20;
+    return s;
+  }
   function hullScale() { return 1 + state.upgrades.hull.level * 0.18; }
-  function pickupRange() { return 28 + state.upgrades.range.level * 14; }
+  function pickupRange() { return 30 + state.upgrades.range.level * 14; }
   function upgradeCost(key) {
     const u = state.upgrades[key];
     return Math.round(u.baseCost * Math.pow(1.65, u.level));
   }
 
-  // Boat
+  // -------- Boat --------
+  const home = islandById('home');
   const boat = {
-    x: island.x + 140,
-    y: island.y + 30,
+    x: home.x + 140,
+    y: home.y + 30,
     vx: 0, vy: 0,
     angle: 0,
     targetAngle: 0,
   };
 
-  // Items: type -> { value, color, draw }
+  // -------- Item types --------
   const itemTypes = {
-    shell: { value: 3, weight: 5, draw: drawShell },
-    starfish: { value: 6, weight: 3, draw: drawStarfish },
-    pearl: { value: 12, weight: 1.5, draw: drawPearl },
-    coral: { value: 8, weight: 2.5, draw: drawCoral },
+    shell:          { value: 3,   weight: 5,   rare: false, draw: drawShell },
+    starfish:       { value: 6,   weight: 3,   rare: false, draw: drawStarfish },
+    coral:          { value: 8,   weight: 2.5, rare: false, draw: drawCoral },
+    pearl:          { value: 12,  weight: 1.5, rare: false, draw: drawPearl },
+    golden_conch:   { value: 50,  weight: 0,   rare: true,  draw: drawGoldenConch, name: 'Golden Conch' },
+    treasure_chest: { value: 200, weight: 0,   rare: true,  draw: drawTreasureChest, name: 'Treasure Chest' },
   };
 
-  function spawnItem(forceType) {
-    // Pick type by weight
-    let type = forceType;
-    if (!type) {
-      const total = Object.values(itemTypes).reduce((s,t)=>s+t.weight,0);
-      let r = Math.random() * total;
-      for (const [k,t] of Object.entries(itemTypes)) {
-        r -= t.weight;
-        if (r <= 0) { type = k; break; }
-      }
+  function pickItemType(island) {
+    // Combine base weight with island-specific boosts
+    const boosts = island && island.itemBoost ? island.itemBoost : {};
+    const weights = {};
+    let total = 0;
+    for (const [k, t] of Object.entries(itemTypes)) {
+      let w = t.weight + (boosts[k] || 0);
+      if (w > 0) { weights[k] = w; total += w; }
     }
-    // Place item somewhere away from the island
-    let x, y, tries = 0;
+    let r = Math.random() * total;
+    for (const [k, w] of Object.entries(weights)) {
+      r -= w;
+      if (r <= 0) return k;
+    }
+    return 'shell';
+  }
+
+  function nearestIsland(point) {
+    let best = null, bestD = Infinity;
+    for (const i of islands) {
+      const d = dist2(point, i);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    return best;
+  }
+
+  function spawnItem(forceType) {
+    let x, y, tries = 0, anchorIsland = null;
     do {
       x = rand(80, WORLD_W - 80);
       y = rand(80, WORLD_H - 80);
       tries++;
-    } while (dist2({x,y}, island) < (island.r + 60) ** 2 && tries < 20);
+      anchorIsland = nearestIsland({ x, y });
+      // Don't spawn on land
+      const dx = x - anchorIsland.x, dy = y - anchorIsland.y;
+      if (Math.hypot(dx, dy) > anchorIsland.r + 50) break;
+    } while (tries < 25);
 
+    const type = forceType || pickItemType(anchorIsland);
     state.items.push({
       x, y, type,
       bob: Math.random() * Math.PI * 2,
@@ -339,56 +496,133 @@
     });
   }
 
-  // Decorative clouds, waves, fishes
-  for (let i = 0; i < 14; i++) {
+  function spawnRareItem() {
+    // Pick a rare type, biased by island
+    const isl = islands[Math.floor(Math.random() * islands.length)];
+    if (!isl.unlocked) return spawnRareItem();
+    const boosts = isl.itemBoost || {};
+    const candidates = ['golden_conch', 'treasure_chest'];
+    let pick = candidates[0];
+    const w0 = (boosts['golden_conch'] || 0) + 1;
+    const w1 = (boosts['treasure_chest'] || 0) + 0.4;
+    if (Math.random() < w1 / (w0 + w1)) pick = 'treasure_chest';
+    // Place near the island (but in the water)
+    let x, y, tries = 0;
+    do {
+      const a = rand(0, Math.PI * 2);
+      const r = isl.r + rand(60, 220);
+      x = clamp(isl.x + Math.cos(a) * r, 60, WORLD_W - 60);
+      y = clamp(isl.y + Math.sin(a) * r, 60, WORLD_H - 60);
+      tries++;
+    } while (tries < 10);
+    state.items.push({ x, y, type: pick, bob: Math.random() * Math.PI * 2, rot: rand(0, Math.PI * 2), rare: true });
+    showMsg(`A rare ${itemTypes[pick].name} appeared near ${isl.name}!`);
+  }
+
+  // -------- World scenery --------
+  for (let i = 0; i < 22; i++) {
     state.clouds.push({
-      x: rand(0, WORLD_W),
-      y: rand(0, WORLD_H),
-      r: rand(28, 60),
-      vx: rand(0.05, 0.18),
+      x: rand(0, WORLD_W), y: rand(0, WORLD_H),
+      r: rand(28, 60), vx: rand(0.05, 0.18),
     });
   }
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 100; i++) {
     state.waves.push({
-      x: rand(0, WORLD_W),
-      y: rand(0, WORLD_H),
-      r: rand(10, 22),
-      phase: rand(0, Math.PI * 2),
+      x: rand(0, WORLD_W), y: rand(0, WORLD_H),
+      r: rand(10, 22), phase: rand(0, Math.PI * 2),
     });
   }
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 14; i++) {
     state.fishes.push({
-      x: rand(0, WORLD_W),
-      y: rand(0, WORLD_H),
+      x: rand(0, WORLD_W), y: rand(0, WORLD_H),
       vx: rand(0.4, 0.9) * (Math.random() < 0.5 ? -1 : 1),
       color: ['#ff7043','#ffd54f','#ba68c8','#4dd0e1'][i % 4],
       bob: rand(0, Math.PI * 2),
     });
   }
 
-  // Initial item spawns
-  for (let i = 0; i < 14; i++) spawnItem();
+  // -------- Wild creatures --------
+  function spawnWildCreature(kind) {
+    let x, y, tries = 0;
+    do {
+      x = rand(200, WORLD_W - 200);
+      y = rand(200, WORLD_H - 200);
+      const isl = nearestIsland({ x, y });
+      if (Math.hypot(x - isl.x, y - isl.y) > isl.r + 120) break;
+      tries++;
+    } while (tries < 20);
+    state.wildCreatures.push({
+      kind, x, y,
+      vx: rand(0.3, 0.7) * (Math.random() < 0.5 ? -1 : 1),
+      vy: rand(-0.2, 0.2),
+      bob: rand(0, Math.PI * 2),
+      jumpT: 0,
+    });
+  }
+  // Spawn initial wild creatures
+  for (let i = 0; i < 3; i++) spawnWildCreature('dolphin');
+  for (let i = 0; i < 3; i++) spawnWildCreature('turtle');
 
-  // Input
+  // Initial item spawns
+  for (let i = 0; i < 24; i++) spawnItem();
+
+  // -------- Input --------
   const keys = {};
   window.addEventListener('keydown', e => {
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
     keys[e.key.toLowerCase()] = true;
+    if (e.key.toLowerCase() === 'f' && state.nearWild && !state.shopOpen && !state.miniGameOpen) {
+      befriend(state.nearWild);
+    }
   });
   window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
   canvas.addEventListener('pointerdown', (e) => {
-    if (!state.started || state.shopOpen) return;
+    if (!state.started || state.shopOpen || state.miniGameOpen) return;
     const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
-    // Convert screen to world via current camera
-    state.target = { x: sx + cam.x, y: sy + cam.y };
+    const worldPt = { x: sx + cam.x, y: sy + cam.y };
+    // Did we click a wild creature?
+    for (const c of state.wildCreatures) {
+      if (dist2(worldPt, c) < 40 * 40 && dist2(boat, c) < 130 * 130) {
+        befriend(c);
+        return;
+      }
+    }
+    state.target = worldPt;
   });
 
-  // Camera
+  document.getElementById('befriend-prompt').addEventListener('click', () => {
+    if (state.nearWild) befriend(state.nearWild);
+  });
+
+  function befriend(c) {
+    if (state.pets[c.kind]) {
+      showMsg(`You already have a ${c.kind} friend! Find a new creature.`);
+      return;
+    }
+    state.pets[c.kind] = true;
+    // Particles
+    for (let i = 0; i < 20; i++) {
+      state.sparkles.push({
+        x: c.x, y: c.y,
+        vx: rand(-2, 2), vy: rand(-3, -0.5),
+        life: 1, color: '#fff176',
+      });
+    }
+    const idx = state.wildCreatures.indexOf(c);
+    if (idx >= 0) state.wildCreatures.splice(idx, 1);
+    state.nearWild = null;
+    document.getElementById('befriend-prompt').style.display = 'none';
+    showToast(c.kind === 'dolphin' ? '🐬 Dolphin friend!' : '🐢 Turtle friend!');
+    setTimeout(() => spawnWildCreature(c.kind), 25000); // respawn a new wild one
+  }
+
+  // -------- Camera --------
   const cam = { x: 0, y: 0 };
 
+  // -------- Game logic --------
   function updateBoat(dt) {
     let ax = 0, ay = 0;
     const accel = 0.12;
@@ -398,9 +632,8 @@
     if (keys['arrowright'] || keys['d']) ax += 1;
 
     let usingKeys = (ax !== 0 || ay !== 0);
-
     if (usingKeys) {
-      state.target = null; // keyboard overrides click target
+      state.target = null;
       const m = Math.hypot(ax, ay) || 1;
       boat.vx += (ax / m) * accel;
       boat.vy += (ay / m) * accel;
@@ -408,58 +641,47 @@
       const dx = state.target.x - boat.x;
       const dy = state.target.y - boat.y;
       const d = Math.hypot(dx, dy);
-      if (d < 8) {
-        state.target = null;
-      } else {
+      if (d < 8) state.target = null;
+      else {
         boat.vx += (dx / d) * accel;
         boat.vy += (dy / d) * accel;
       }
     } else {
-      // Drift damping
-      boat.vx *= 0.94;
-      boat.vy *= 0.94;
+      boat.vx *= 0.94; boat.vy *= 0.94;
     }
 
-    // Cap speed
     const sp = Math.hypot(boat.vx, boat.vy);
     const maxS = speedMax();
     if (sp > maxS) {
       boat.vx = (boat.vx / sp) * maxS;
       boat.vy = (boat.vy / sp) * maxS;
     }
+    boat.vx *= 0.985; boat.vy *= 0.985;
+    boat.x += boat.vx; boat.y += boat.vy;
 
-    // Always apply mild water drag
-    boat.vx *= 0.985;
-    boat.vy *= 0.985;
+    // World bounds
+    const m = 30;
+    if (boat.x < m) { boat.x = m; boat.vx = Math.abs(boat.vx) * 0.4; }
+    if (boat.y < m) { boat.y = m; boat.vy = Math.abs(boat.vy) * 0.4; }
+    if (boat.x > WORLD_W - m) { boat.x = WORLD_W - m; boat.vx = -Math.abs(boat.vx) * 0.4; }
+    if (boat.y > WORLD_H - m) { boat.y = WORLD_H - m; boat.vy = -Math.abs(boat.vy) * 0.4; }
 
-    boat.x += boat.vx;
-    boat.y += boat.vy;
-
-    // Keep boat in world
-    const margin = 30;
-    if (boat.x < margin) { boat.x = margin; boat.vx = Math.abs(boat.vx) * 0.4; }
-    if (boat.y < margin) { boat.y = margin; boat.vy = Math.abs(boat.vy) * 0.4; }
-    if (boat.x > WORLD_W - margin) { boat.x = WORLD_W - margin; boat.vx = -Math.abs(boat.vx) * 0.4; }
-    if (boat.y > WORLD_H - margin) { boat.y = WORLD_H - margin; boat.vy = -Math.abs(boat.vy) * 0.4; }
-
-    // Push boat away from island shoreline (can't sail onto land)
-    const dx = boat.x - island.x;
-    const dy = boat.y - island.y;
-    const d = Math.hypot(dx, dy);
-    const landR = island.r * 0.85;
-    if (d < landR) {
-      const nx = dx / (d || 1), ny = dy / (d || 1);
-      boat.x = island.x + nx * landR;
-      boat.y = island.y + ny * landR;
-      boat.vx *= -0.3;
-      boat.vy *= -0.3;
+    // Push away from each island's land
+    for (const isl of islands) {
+      const dx = boat.x - isl.x, dy = boat.y - isl.y;
+      const d = Math.hypot(dx, dy);
+      const landR = isl.r * 0.85;
+      if (d < landR) {
+        const nx = dx / (d || 1), ny = dy / (d || 1);
+        boat.x = isl.x + nx * landR;
+        boat.y = isl.y + ny * landR;
+        boat.vx *= -0.3; boat.vy *= -0.3;
+      }
     }
 
-    // Aim boat in direction of motion
     if (Math.hypot(boat.vx, boat.vy) > 0.15) {
       boat.targetAngle = Math.atan2(boat.vy, boat.vx);
     }
-    // Smoothly rotate boat
     let diff = boat.targetAngle - boat.angle;
     while (diff > Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
@@ -468,25 +690,32 @@
 
   function updateItems() {
     for (const it of state.items) it.bob += 0.04;
-    // Pickup
     const r2 = pickupRange() * pickupRange();
     for (let i = state.items.length - 1; i >= 0; i--) {
       const it = state.items[i];
       if (dist2(boat, it) < r2) {
         if (state.cargo.length < cargoMax()) {
           state.cargo.push(it.type);
-          // Sparkle
-          for (let s = 0; s < 8; s++) {
+          const t = itemTypes[it.type];
+          // Particles
+          const col = t.rare ? '#fff176' : '#ffe082';
+          const count = t.rare ? 22 : 8;
+          for (let s = 0; s < count; s++) {
             state.sparkles.push({
               x: it.x, y: it.y,
-              vx: rand(-1.5, 1.5), vy: rand(-2.4, -0.4),
-              life: 1, color: '#ffe082',
+              vx: rand(-2, 2), vy: rand(-3, -0.4),
+              life: 1, color: col,
             });
           }
           state.items.splice(i, 1);
-          showMsg(`+1 ${it.type}! (worth ${itemTypes[it.type].value} gold)`);
-          // Respawn a new item somewhere
-          setTimeout(() => { if (state.items.length < 30) spawnItem(); }, 800);
+          if (t.rare) {
+            showToast(`★ ${t.name}! +${t.value}g ★`);
+          } else {
+            showMsg(`+1 ${it.type}! (worth ${t.value} gold)`);
+          }
+          setTimeout(() => { if (state.items.length < 40) spawnItem(); }, 800);
+        } else {
+          showMsg('Cargo full! Sail home to sell.');
         }
       }
     }
@@ -511,28 +740,99 @@
       s.life -= 0.025;
       if (s.life <= 0) state.sparkles.splice(i, 1);
     }
-  }
+    // Wild creatures swim around
+    for (const c of state.wildCreatures) {
+      c.bob += 0.06;
+      c.x += c.vx;
+      c.y += c.vy;
+      // Gentle wandering
+      if (Math.random() < 0.01) {
+        c.vx = rand(0.3, 0.7) * (Math.random() < 0.5 ? -1 : 1);
+        c.vy = rand(-0.3, 0.3);
+      }
+      // Bounce off world edges
+      if (c.x < 80 || c.x > WORLD_W - 80) c.vx *= -1;
+      if (c.y < 80 || c.y > WORLD_H - 80) c.vy *= -1;
+      // Avoid islands
+      for (const isl of islands) {
+        const dx = c.x - isl.x, dy = c.y - isl.y;
+        const d = Math.hypot(dx, dy);
+        if (d < isl.r + 30) {
+          c.vx += (dx / (d || 1)) * 0.3;
+          c.vy += (dy / (d || 1)) * 0.3;
+        }
+      }
+      if (c.kind === 'dolphin') c.jumpT += 0.05;
+    }
 
-  function checkIsland() {
-    const dx = boat.x - island.x;
-    const dy = boat.y - island.y;
-    const d = Math.hypot(dx, dy);
-    const wasNear = state.nearIsland;
-    state.nearIsland = d < island.r + 30;
-    if (state.nearIsland && !wasNear && state.cargo.length > 0) {
-      // Sell cargo & open shop
-      let earned = 0;
-      for (const c of state.cargo) earned += itemTypes[c].value;
-      state.gold += earned;
-      state.cargo = [];
-      showMsg(`Sold cargo for ${earned} gold!`);
-      openShop();
-    } else if (state.nearIsland && !wasNear && state.cargo.length === 0) {
-      openShop();
+    // Check for near wild creatures (befriend prompt)
+    let near = null;
+    for (const c of state.wildCreatures) {
+      if (dist2(boat, c) < 110 * 110 && !state.pets[c.kind]) {
+        near = c; break;
+      }
+    }
+    state.nearWild = near;
+    const prompt = document.getElementById('befriend-prompt');
+    if (near && !state.shopOpen && !state.miniGameOpen) {
+      prompt.style.display = 'block';
+      prompt.firstChild.textContent = near.kind === 'dolphin'
+        ? 'Tap to befriend the dolphin! '
+        : 'Tap to befriend the turtle! ';
+    } else {
+      prompt.style.display = 'none';
+    }
+
+    // Rare item spawning
+    state.rareSpawnTimer--;
+    if (state.rareSpawnTimer <= 0) {
+      // Don't have too many rares at once
+      const rareCount = state.items.filter(it => itemTypes[it.type].rare).length;
+      if (rareCount < 2) spawnRareItem();
+      state.rareSpawnTimer = Math.floor(rand(600, 1400)); // 10-23s
     }
   }
 
-  // Rendering
+  function unlockCheck() {
+    for (const isl of islands) {
+      if (!isl.unlocked && isl.requires) {
+        let ok = true;
+        for (const [k, lvl] of Object.entries(isl.requires)) {
+          if (state.upgrades[k].level < lvl) { ok = false; break; }
+        }
+        if (ok) {
+          isl.unlocked = true;
+          showToast(`New island discovered: ${isl.name}!`);
+        }
+      }
+    }
+  }
+
+  function checkIsland() {
+    let near = null;
+    for (const isl of islands) {
+      if (!isl.unlocked) continue;
+      const d = Math.hypot(boat.x - isl.x, boat.y - isl.y);
+      if (d < isl.r + 35) { near = isl; break; }
+    }
+    const wasNear = state.nearIsland;
+    if (near && near !== wasNear) {
+      state.nearIsland = near;
+      // Sell cargo
+      if (state.cargo.length > 0) {
+        let earned = 0;
+        for (const c of state.cargo) earned += itemTypes[c].value;
+        state.gold += earned;
+        state.cargo = [];
+        showMsg(`Sold cargo for ${earned} gold!`);
+      }
+      openShop(near);
+    } else if (!near) {
+      state.nearIsland = null;
+    }
+  }
+
+  // -------- Drawing --------
   function updateCamera() {
     const targetX = boat.x - W / 2;
     const targetY = boat.y - H / 2;
@@ -545,7 +845,6 @@
   }
 
   function drawOcean() {
-    // Base ocean gradient
     const g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, '#4fc3f7');
     g.addColorStop(0.5, '#29b6f6');
@@ -553,12 +852,10 @@
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
-    // Wave sparkles
     ctx.strokeStyle = 'rgba(255,255,255,0.55)';
     ctx.lineWidth = 2;
     for (const w of state.waves) {
-      const sx = w.x - cam.x;
-      const sy = w.y - cam.y;
+      const sx = w.x - cam.x, sy = w.y - cam.y;
       if (sx < -50 || sx > W + 50 || sy < -50 || sy > H + 50) continue;
       const a = Math.sin(w.phase) * 0.35 + 0.5;
       ctx.globalAlpha = a;
@@ -570,63 +867,150 @@
     ctx.globalAlpha = 1;
   }
 
-  function drawIsland() {
-    const sx = island.x - cam.x;
-    const sy = island.y - cam.y;
-    // Sand ring
-    ctx.fillStyle = '#fff59d';
-    ctx.beginPath();
-    ctx.arc(sx, sy, island.r, 0, Math.PI * 2);
-    ctx.fill();
-    // Grass top
-    ctx.fillStyle = '#81c784';
-    ctx.beginPath();
-    ctx.arc(sx, sy, island.r * 0.78, 0, Math.PI * 2);
-    ctx.fill();
-    // Inner darker green
-    ctx.fillStyle = '#4caf50';
-    ctx.beginPath();
-    ctx.arc(sx - 12, sy - 8, island.r * 0.55, 0, Math.PI * 2);
-    ctx.fill();
+  function drawIslands() {
+    for (const isl of islands) {
+      const sx = isl.x - cam.x, sy = isl.y - cam.y;
+      if (sx < -200 || sx > W + 200 || sy < -200 || sy > H + 200) continue;
 
-    // Palm trees
-    drawPalm(sx - 30, sy - 28, 1);
-    drawPalm(sx + 25, sy + 10, 0.85);
-    drawPalm(sx + 5, sy - 45, 1.1);
+      // If locked, draw misty/silhouette
+      if (!isl.unlocked) {
+        ctx.fillStyle = 'rgba(60, 80, 100, 0.55)';
+        ctx.beginPath();
+        ctx.arc(sx, sy, isl.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(40, 60, 80, 0.6)';
+        ctx.beginPath();
+        ctx.arc(sx, sy, isl.r * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = 'bold 12px Trebuchet MS';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fff';
+        ctx.fillText('???', sx, sy);
+        let req = '';
+        if (isl.requires) {
+          for (const [k, lvl] of Object.entries(isl.requires)) {
+            req = `Needs ${state.upgrades[k].name} Lv${lvl}`;
+          }
+        }
+        ctx.fillText(req, sx, sy + isl.r + 14);
+        continue;
+      }
 
-    // Little hut
-    const hx = sx - 5, hy = sy + 25;
-    ctx.fillStyle = '#6d4c41';
-    ctx.fillRect(hx - 14, hy - 6, 28, 18);
-    ctx.fillStyle = '#a1887f';
-    ctx.fillRect(hx - 4, hy + 2, 8, 10);
-    ctx.fillStyle = '#5d4037';
-    ctx.beginPath();
-    ctx.moveTo(hx - 18, hy - 6);
-    ctx.lineTo(hx, hy - 20);
-    ctx.lineTo(hx + 18, hy - 6);
-    ctx.closePath();
-    ctx.fill();
+      // Sand ring
+      ctx.fillStyle = isl.sand;
+      ctx.beginPath();
+      ctx.arc(sx, sy, isl.r, 0, Math.PI * 2);
+      ctx.fill();
+      // Grass
+      ctx.fillStyle = isl.grass;
+      ctx.beginPath();
+      ctx.arc(sx, sy, isl.r * 0.78, 0, Math.PI * 2);
+      ctx.fill();
+      // Inner
+      ctx.fillStyle = isl.innerGrass;
+      ctx.beginPath();
+      ctx.arc(sx - 10, sy - 8, isl.r * 0.55, 0, Math.PI * 2);
+      ctx.fill();
 
-    // Sign label
-    ctx.font = 'bold 14px Trebuchet MS';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#3e2723';
-    ctx.fillText('Home Island', sx, sy + island.r + 18);
+      if (isl.id === 'home') {
+        drawPalm(sx - 30, sy - 28, 1);
+        drawPalm(sx + 25, sy + 10, 0.85);
+        drawPalm(sx + 5, sy - 45, 1.1);
+        // hut
+        const hx = sx - 5, hy = sy + 25;
+        ctx.fillStyle = '#6d4c41';
+        ctx.fillRect(hx - 14, hy - 6, 28, 18);
+        ctx.fillStyle = '#a1887f';
+        ctx.fillRect(hx - 4, hy + 2, 8, 10);
+        ctx.fillStyle = '#5d4037';
+        ctx.beginPath();
+        ctx.moveTo(hx - 18, hy - 6);
+        ctx.lineTo(hx, hy - 20);
+        ctx.lineTo(hx + 18, hy - 6);
+        ctx.closePath();
+        ctx.fill();
+      } else if (isl.id === 'reef') {
+        // Coral mounds
+        drawPalm(sx - 20, sy - 20, 0.85);
+        drawPalm(sx + 22, sy + 8, 0.95);
+        ctx.fillStyle = '#ec407a';
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.arc(sx + Math.cos(a) * 30, sy + Math.sin(a) * 30, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // Fishing pole hut
+        ctx.fillStyle = '#6d4c41';
+        ctx.fillRect(sx - 12, sy + 18, 24, 14);
+        ctx.strokeStyle = '#bcaaa4';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(sx + 10, sy + 18);
+        ctx.lineTo(sx + 26, sy + 4);
+        ctx.stroke();
+      } else if (isl.id === 'volcano') {
+        // Volcano cone
+        ctx.fillStyle = '#3e2723';
+        ctx.beginPath();
+        ctx.moveTo(sx - 35, sy + 20);
+        ctx.lineTo(sx, sy - 50);
+        ctx.lineTo(sx + 35, sy + 20);
+        ctx.closePath();
+        ctx.fill();
+        // Lava top
+        ctx.fillStyle = '#ff5722';
+        ctx.beginPath();
+        ctx.ellipse(sx, sy - 48, 8, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Smoke puff
+        ctx.fillStyle = 'rgba(120,120,120,0.7)';
+        ctx.beginPath();
+        ctx.arc(sx + 2, sy - 60, 6, 0, Math.PI * 2);
+        ctx.arc(sx - 4, sy - 65, 5, 0, Math.PI * 2);
+        ctx.fill();
+        // Lava streams
+        ctx.strokeStyle = '#ff8a65';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(sx - 4, sy - 40);
+        ctx.lineTo(sx - 18, sy + 12);
+        ctx.moveTo(sx + 6, sy - 38);
+        ctx.lineTo(sx + 22, sy + 14);
+        ctx.stroke();
+      } else if (isl.id === 'pearl') {
+        // Pearl shells on the island
+        drawPalm(sx - 20, sy - 20, 0.9);
+        ctx.fillStyle = '#e1bee7';
+        for (let i = 0; i < 6; i++) {
+          ctx.beginPath();
+          ctx.arc(sx + rand(-30, 30), sy + rand(-15, 25), 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // Glow
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.beginPath();
+        ctx.arc(sx, sy, isl.r * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.font = 'bold 14px Trebuchet MS';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#3e2723';
+      ctx.fillText(isl.name, sx, sy + isl.r + 18);
+    }
   }
 
   function drawPalm(x, y, scale) {
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(scale, scale);
-    // trunk
     ctx.strokeStyle = '#6d4c41';
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.moveTo(0, 6);
     ctx.quadraticCurveTo(2, -8, -2, -24);
     ctx.stroke();
-    // leaves
     ctx.fillStyle = '#43a047';
     for (let i = 0; i < 6; i++) {
       const a = (i / 6) * Math.PI * 2;
@@ -638,7 +1022,6 @@
       ctx.fill();
       ctx.restore();
     }
-    // coconuts
     ctx.fillStyle = '#4e342e';
     ctx.beginPath(); ctx.arc(-4, -22, 2, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(0, -22, 2, 0, Math.PI * 2); ctx.fill();
@@ -646,21 +1029,18 @@
   }
 
   function drawBoat() {
-    const sx = boat.x - cam.x;
-    const sy = boat.y - cam.y;
+    const sx = boat.x - cam.x, sy = boat.y - cam.y;
     const scale = hullScale();
     ctx.save();
     ctx.translate(sx, sy);
     ctx.rotate(boat.angle);
     ctx.scale(scale, scale);
 
-    // Wake
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.beginPath();
     ctx.ellipse(-30, 0, 18, 6, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Hull (outrigger canoe shape)
     ctx.fillStyle = '#6d4c41';
     ctx.beginPath();
     ctx.moveTo(28, 0);
@@ -669,7 +1049,6 @@
     ctx.quadraticCurveTo(22, -12, 28, 0);
     ctx.closePath();
     ctx.fill();
-    // Hull stripe
     ctx.fillStyle = '#d84315';
     ctx.beginPath();
     ctx.moveTo(24, 0);
@@ -678,15 +1057,12 @@
     ctx.quadraticCurveTo(18, -5, 24, 0);
     ctx.closePath();
     ctx.fill();
-    // Pattern dots
     ctx.fillStyle = '#fff8e1';
     for (let i = -1; i <= 1; i++) {
       ctx.beginPath();
       ctx.arc(i * 8, 0, 1.2, 0, Math.PI * 2);
       ctx.fill();
     }
-
-    // Outrigger (side float) — Polynesian feature
     ctx.strokeStyle = '#5d4037';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -697,15 +1073,11 @@
     ctx.beginPath();
     ctx.ellipse(1, -22, 16, 3, 0, 0, Math.PI * 2);
     ctx.fill();
-
-    // Mast & sail
     ctx.strokeStyle = '#3e2723';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(2, 0); ctx.lineTo(2, -24);
     ctx.stroke();
-
-    // Sail (triangular, claw shaped)
     ctx.fillStyle = '#fff8e1';
     ctx.beginPath();
     ctx.moveTo(2, -24);
@@ -713,7 +1085,6 @@
     ctx.quadraticCurveTo(8, -8, 2, -8);
     ctx.closePath();
     ctx.fill();
-    // Sail pattern
     ctx.fillStyle = '#d84315';
     ctx.beginPath();
     ctx.arc(10, -12, 3, 0, Math.PI * 2);
@@ -725,11 +1096,10 @@
     ctx.moveTo(5, -16); ctx.lineTo(13, -8);
     ctx.stroke();
 
-    // Cargo on deck
     for (let i = 0; i < state.cargo.length; i++) {
       ctx.save();
       ctx.translate(-12 + (i % 3) * 6, -2 + Math.floor(i / 3) * 4);
-      ctx.scale(0.4, 0.4);
+      ctx.scale(0.35, 0.35);
       itemTypes[state.cargo[i]].draw(ctx, 0, 0, 0);
       ctx.restore();
     }
@@ -737,16 +1107,148 @@
     ctx.restore();
   }
 
+  // Pet followers drawn following the boat
+  function drawPets() {
+    const offset = 36 + state.upgrades.hull.level * 4;
+    let idx = 0;
+    if (state.pets.dolphin) {
+      const angle = boat.angle + Math.PI + (idx * 0.4 - 0.2);
+      const x = boat.x + Math.cos(angle) * offset;
+      const y = boat.y + Math.sin(angle) * offset;
+      drawDolphin(x - cam.x, y - cam.y, boat.angle, performance.now() / 200);
+      idx++;
+    }
+    if (state.pets.turtle) {
+      const angle = boat.angle + Math.PI + (idx * 0.4 - 0.2);
+      const x = boat.x + Math.cos(angle) * offset;
+      const y = boat.y + Math.sin(angle) * offset;
+      drawTurtle(x - cam.x, y - cam.y, boat.angle, performance.now() / 250);
+      idx++;
+    }
+  }
+
+  function drawDolphin(sx, sy, angle, t) {
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(angle);
+    const jump = Math.sin(t) * 4;
+    ctx.translate(0, -jump);
+    ctx.fillStyle = '#90a4ae';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 18, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Belly
+    ctx.fillStyle = '#eceff1';
+    ctx.beginPath();
+    ctx.ellipse(2, 2, 12, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Tail
+    ctx.fillStyle = '#90a4ae';
+    ctx.beginPath();
+    ctx.moveTo(-16, 0);
+    ctx.lineTo(-26, -7);
+    ctx.lineTo(-22, 0);
+    ctx.lineTo(-26, 7);
+    ctx.closePath();
+    ctx.fill();
+    // Fin
+    ctx.beginPath();
+    ctx.moveTo(0, -5);
+    ctx.lineTo(-4, -14);
+    ctx.lineTo(4, -7);
+    ctx.closePath();
+    ctx.fill();
+    // Eye
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(10, -1, 1.2, 0, Math.PI * 2); ctx.fill();
+    // Smile
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.arc(13, 1, 2, 0, Math.PI);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawTurtle(sx, sy, angle, t) {
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(angle);
+    // Shell
+    ctx.fillStyle = '#558b2f';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 14, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Shell pattern
+    ctx.fillStyle = '#33691e';
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * 5, Math.sin(a) * 4, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Head
+    ctx.fillStyle = '#8bc34a';
+    ctx.beginPath();
+    ctx.arc(13, 0, 5, 0, Math.PI * 2);
+    ctx.fill();
+    // Eye
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(15, -1, 0.9, 0, Math.PI * 2); ctx.fill();
+    // Flippers
+    const fl = Math.sin(t) * 2;
+    ctx.fillStyle = '#8bc34a';
+    ctx.beginPath();
+    ctx.ellipse(-3, -10 + fl, 5, 3, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(-3, 10 - fl, 5, 3, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawWildCreatures() {
+    for (const c of state.wildCreatures) {
+      const sx = c.x - cam.x;
+      const sy = c.y - cam.y + Math.sin(c.bob) * 2;
+      if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) continue;
+      ctx.save();
+      // Highlight when near
+      if (c === state.nearWild) {
+        ctx.fillStyle = 'rgba(255,235,130,0.4)';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 28 + Math.sin(performance.now() / 200) * 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      const angle = Math.atan2(c.vy, c.vx);
+      if (c.kind === 'dolphin') {
+        drawDolphin(sx, sy, angle, c.bob * 2);
+      } else {
+        drawTurtle(sx, sy, angle, c.bob * 2);
+      }
+      ctx.restore();
+    }
+  }
+
   function drawItems() {
     for (const it of state.items) {
       const sx = it.x - cam.x;
       const sy = it.y - cam.y + Math.sin(it.bob) * 3;
       if (sx < -30 || sx > W + 30 || sy < -30 || sy > H + 30) continue;
-      // shadow
       ctx.fillStyle = 'rgba(0,0,0,0.18)';
       ctx.beginPath();
       ctx.ellipse(sx, sy + 12, 10, 3, 0, 0, Math.PI * 2);
       ctx.fill();
+      // Rare items get a glow
+      if (itemTypes[it.type].rare) {
+        const gl = ctx.createRadialGradient(sx, sy, 4, sx, sy, 32);
+        gl.addColorStop(0, 'rgba(255,235,130,0.6)');
+        gl.addColorStop(1, 'rgba(255,235,130,0)');
+        ctx.fillStyle = gl;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 32, 0, Math.PI * 2);
+        ctx.fill();
+      }
       itemTypes[it.type].draw(ctx, sx, sy, it.rot);
     }
   }
@@ -781,10 +1283,8 @@
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
       const r = i % 2 === 0 ? 12 : 5;
-      const px = Math.cos(a) * r;
-      const py = Math.sin(a) * r;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
+      const px = Math.cos(a) * r, py = Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
     }
     ctx.closePath();
     ctx.fill();
@@ -800,7 +1300,6 @@
   function drawPearl(ctx, x, y, rot) {
     ctx.save();
     ctx.translate(x, y);
-    // Shell halves
     ctx.fillStyle = '#90a4ae';
     ctx.beginPath();
     ctx.ellipse(0, 5, 12, 5, 0, 0, Math.PI * 2);
@@ -809,7 +1308,6 @@
     ctx.beginPath();
     ctx.ellipse(0, -1, 11, 5, 0, Math.PI, Math.PI * 2);
     ctx.fill();
-    // Pearl
     const g = ctx.createRadialGradient(-2, -2, 1, 0, 0, 5);
     g.addColorStop(0, '#ffffff');
     g.addColorStop(1, '#e1bee7');
@@ -826,15 +1324,9 @@
     ctx.fillStyle = '#ec407a';
     ctx.beginPath();
     ctx.moveTo(0, 10);
-    ctx.lineTo(-3, -4);
-    ctx.lineTo(-8, -6);
-    ctx.lineTo(-3, -2);
-    ctx.lineTo(-2, -10);
-    ctx.lineTo(0, -4);
-    ctx.lineTo(2, -10);
-    ctx.lineTo(3, -2);
-    ctx.lineTo(8, -6);
-    ctx.lineTo(3, -4);
+    ctx.lineTo(-3, -4); ctx.lineTo(-8, -6); ctx.lineTo(-3, -2);
+    ctx.lineTo(-2, -10); ctx.lineTo(0, -4); ctx.lineTo(2, -10);
+    ctx.lineTo(3, -2); ctx.lineTo(8, -6); ctx.lineTo(3, -4);
     ctx.lineTo(2, 10);
     ctx.closePath();
     ctx.fill();
@@ -846,10 +1338,81 @@
     ctx.fill();
     ctx.restore();
   }
+  function drawGoldenConch(ctx, x, y, rot) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    // Pulsing glow
+    const pulse = Math.sin(performance.now() / 250) * 0.3 + 0.7;
+    ctx.fillStyle = `rgba(255,235,130,${0.5 * pulse})`;
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.fill();
+    // Conch body
+    const g = ctx.createLinearGradient(-10, -10, 10, 10);
+    g.addColorStop(0, '#fff59d');
+    g.addColorStop(1, '#ff8f00');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(-12, 6);
+    ctx.quadraticCurveTo(-14, -10, 0, -12);
+    ctx.quadraticCurveTo(14, -8, 10, 8);
+    ctx.quadraticCurveTo(0, 12, -12, 6);
+    ctx.fill();
+    // Spiral
+    ctx.strokeStyle = '#bf360c';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(2, -2, 6, 0, Math.PI * 1.5);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(2, -2, 3, 0, Math.PI * 1.5);
+    ctx.stroke();
+    // Highlight
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(-5, -5, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function drawTreasureChest(ctx, x, y, rot) {
+    ctx.save();
+    ctx.translate(x, y);
+    const pulse = Math.sin(performance.now() / 200) * 0.4 + 0.6;
+    ctx.fillStyle = `rgba(255,235,130,${0.6 * pulse})`;
+    ctx.beginPath();
+    ctx.arc(0, 0, 22, 0, Math.PI * 2);
+    ctx.fill();
+    // Chest box
+    ctx.fillStyle = '#6d4c41';
+    ctx.fillRect(-12, -2, 24, 14);
+    // Lid
+    ctx.fillStyle = '#8d6e63';
+    ctx.beginPath();
+    ctx.moveTo(-12, -2);
+    ctx.quadraticCurveTo(0, -14, 12, -2);
+    ctx.closePath();
+    ctx.fill();
+    // Bands
+    ctx.fillStyle = '#ffc107';
+    ctx.fillRect(-12, -2, 24, 2);
+    ctx.fillRect(-12, 5, 24, 2);
+    // Lock
+    ctx.fillStyle = '#ffeb3b';
+    ctx.fillRect(-2, -1, 4, 5);
+    // Gold sparkles peeking
+    ctx.fillStyle = '#fff176';
+    ctx.beginPath();
+    ctx.arc(-4, -4, 2, 0, Math.PI * 2);
+    ctx.arc(3, -6, 1.5, 0, Math.PI * 2);
+    ctx.arc(5, -3, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 
   function drawClouds() {
     for (const c of state.clouds) {
-      const sx = c.x - cam.x * 0.6; // parallax
+      const sx = c.x - cam.x * 0.6;
       const sy = c.y - cam.y * 0.6;
       if (sx < -100 || sx > W + 100) continue;
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
@@ -861,7 +1424,6 @@
       ctx.fill();
     }
   }
-
   function drawFishes() {
     for (const f of state.fishes) {
       const sx = f.x - cam.x;
@@ -887,8 +1449,7 @@
 
   function drawSparkles() {
     for (const s of state.sparkles) {
-      const sx = s.x - cam.x;
-      const sy = s.y - cam.y;
+      const sx = s.x - cam.x, sy = s.y - cam.y;
       ctx.globalAlpha = Math.max(0, s.life);
       ctx.fillStyle = s.color;
       ctx.beginPath();
@@ -899,14 +1460,24 @@
   }
 
   function drawCompass() {
-    // Shows arrow toward home island when far
-    const dx = island.x - boat.x;
-    const dy = island.y - boat.y;
-    const d = Math.hypot(dx, dy);
-    if (d < 350) return;
+    // Point toward nearest unlocked island we're not already at
+    let target = null, bestD = Infinity;
+    for (const isl of islands) {
+      if (!isl.unlocked) continue;
+      if (isl === state.nearIsland) continue;
+      const d = Math.hypot(boat.x - isl.x, boat.y - isl.y);
+      if (d < bestD) { bestD = d; target = isl; }
+    }
+    if (!target || bestD < 350) {
+      // Always show home when we're away from it
+      target = home;
+      const d = Math.hypot(boat.x - home.x, boat.y - home.y);
+      if (d < 350) return;
+    }
+    const dx = target.x - boat.x;
+    const dy = target.y - boat.y;
     const a = Math.atan2(dy, dx);
-    const cx = W / 2;
-    const cy = H - 80;
+    const cx = W / 2, cy = H - 80;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.fillStyle = 'rgba(0, 60, 90, 0.55)';
@@ -929,45 +1500,68 @@
     ctx.fillStyle = '#ffe082';
     ctx.font = 'bold 11px Trebuchet MS';
     ctx.textAlign = 'center';
-    ctx.fillText('home', cx, cy + 40);
+    ctx.fillText(target.name.toLowerCase(), cx, cy + 40);
   }
 
-  // HUD
+  // -------- HUD --------
   const goldEl = document.getElementById('gold');
   const cargoEl = document.getElementById('cargo');
   const cargoMaxEl = document.getElementById('cargo-max');
   const cargoFill = document.getElementById('cargo-fill');
+  const petsRow = document.getElementById('pets-row');
   function updateHUD() {
     goldEl.textContent = state.gold;
     cargoEl.textContent = state.cargo.length;
     cargoMaxEl.textContent = cargoMax();
     cargoFill.style.width = ((state.cargo.length / cargoMax()) * 100) + '%';
+    let html = '';
+    if (state.pets.dolphin) html += '<span class="pet-badge">🐬 +speed</span>';
+    if (state.pets.turtle)  html += '<span class="pet-badge">🐢 +cargo</span>';
+    petsRow.innerHTML = html;
   }
 
-  // Shop
+  // -------- Shop --------
   const shopEl = document.getElementById('shop');
   const upgradesEl = document.getElementById('upgrades');
-  function openShop() {
+  const shopActions = document.getElementById('shop-actions');
+  const shopTitle = document.getElementById('shop-title');
+  const shopTagline = document.getElementById('shop-tagline');
+  function openShop(isl) {
     state.shopOpen = true;
-    renderShop();
+    shopTitle.textContent = isl.name;
+    shopTagline.textContent = isl.tagline;
+    upgradesEl.innerHTML = '';
+    if (isl.hasShop) renderUpgrades();
+    shopActions.innerHTML = '';
+    if (isl.minigame) {
+      const b = document.createElement('button');
+      b.className = 'shop-action';
+      b.textContent = isl.minigame === 'coconut' ? '🥥 Coconut Catch' : '🎣 Go Fishing';
+      b.addEventListener('click', () => { closeShop(); openMiniGame(isl.minigame); });
+      shopActions.appendChild(b);
+    }
+    const sail = document.createElement('button');
+    sail.className = 'shop-action sail';
+    sail.textContent = 'Set Sail!';
+    sail.addEventListener('click', closeShop);
+    shopActions.appendChild(sail);
     shopEl.style.display = 'block';
   }
   function closeShop() {
     state.shopOpen = false;
     shopEl.style.display = 'none';
-    // Nudge boat away from island so we don't immediately reopen
-    const dx = boat.x - island.x;
-    const dy = boat.y - island.y;
-    const d = Math.hypot(dx, dy) || 1;
-    boat.x = island.x + (dx / d) * (island.r + 40);
-    boat.y = island.y + (dy / d) * (island.r + 40);
-    boat.vx = (dx / d) * 1.5;
-    boat.vy = (dy / d) * 1.5;
-    state.nearIsland = false;
+    if (state.nearIsland) {
+      const isl = state.nearIsland;
+      const dx = boat.x - isl.x, dy = boat.y - isl.y;
+      const d = Math.hypot(dx, dy) || 1;
+      boat.x = isl.x + (dx / d) * (isl.r + 45);
+      boat.y = isl.y + (dy / d) * (isl.r + 45);
+      boat.vx = (dx / d) * 1.5;
+      boat.vy = (dy / d) * 1.5;
+      state.nearIsland = null;
+    }
   }
-  document.getElementById('close-shop').addEventListener('click', closeShop);
-
-  function renderShop() {
+  function renderUpgrades() {
     upgradesEl.innerHTML = '';
     for (const [key, u] of Object.entries(state.upgrades)) {
       const cost = upgradeCost(key);
@@ -993,14 +1587,412 @@
           state.gold -= cost;
           state.upgrades[key].level++;
           showMsg(`Upgraded ${state.upgrades[key].name}!`);
-          renderShop();
+          unlockCheck();
+          renderUpgrades();
           updateHUD();
         }
       });
     });
   }
 
-  // Messages
+  // -------- Mini-games --------
+  const mgOverlay = document.getElementById('minigame-overlay');
+  const mgCanvas = document.getElementById('minigame-canvas');
+  const mgCtx = mgCanvas.getContext('2d');
+  const mgTitle = document.getElementById('minigame-title');
+  const mgInstr = document.getElementById('minigame-instructions');
+  const mgScoreEl = document.getElementById('mg-score');
+  const mgTimeEl = document.getElementById('mg-time');
+  const mgQuit = document.getElementById('mg-quit');
+
+  let mgState = null;
+  mgQuit.addEventListener('click', () => closeMiniGame());
+
+  function openMiniGame(kind) {
+    state.miniGameOpen = true;
+    mgOverlay.style.display = 'block';
+    if (kind === 'coconut') startCoconutGame();
+    else if (kind === 'fishing') startFishingGame();
+  }
+  function closeMiniGame() {
+    state.miniGameOpen = false;
+    mgOverlay.style.display = 'none';
+    if (mgState) {
+      if (mgState.earned > 0) {
+        state.gold += mgState.earned;
+        showMsg(`You earned ${mgState.earned} gold!`);
+      }
+      mgState = null;
+    }
+    if (state.nearIsland) {
+      const isl = state.nearIsland;
+      const dx = boat.x - isl.x, dy = boat.y - isl.y;
+      const d = Math.hypot(dx, dy) || 1;
+      boat.x = isl.x + (dx / d) * (isl.r + 45);
+      boat.y = isl.y + (dy / d) * (isl.r + 45);
+      state.nearIsland = null;
+    }
+    updateHUD();
+  }
+
+  // Coconut Catch
+  function startCoconutGame() {
+    mgTitle.textContent = '🥥 Coconut Catch';
+    mgInstr.textContent = 'Move the basket with ← → or mouse to catch coconuts. Avoid bombs!';
+    mgState = {
+      kind: 'coconut',
+      basketX: mgCanvas.width / 2,
+      coconuts: [],
+      spawnT: 0,
+      score: 0,
+      earned: 0,
+      time: 30,
+      started: performance.now(),
+    };
+    mgScoreEl.textContent = '0';
+    mgTimeEl.textContent = '30';
+  }
+  // Fishing
+  function startFishingGame() {
+    mgTitle.textContent = '🎣 Fishing!';
+    mgInstr.textContent = 'Click or press SPACE when the marker is in the green zone!';
+    mgState = {
+      kind: 'fishing',
+      round: 0,
+      maxRounds: 6,
+      pos: 0,
+      vel: 0.018,
+      zoneStart: 0,
+      zoneWidth: 0,
+      locked: false,
+      lastResult: null,
+      score: 0,
+      earned: 0,
+      time: 0,
+      started: performance.now(),
+    };
+    newFishingRound();
+    mgScoreEl.textContent = '0';
+    mgTimeEl.textContent = '0/6';
+  }
+  function newFishingRound() {
+    if (!mgState) return;
+    mgState.pos = 0;
+    mgState.vel = 0.014 + mgState.round * 0.003;
+    mgState.zoneWidth = Math.max(0.10, 0.22 - mgState.round * 0.02);
+    mgState.zoneStart = rand(0.25, 0.75 - mgState.zoneWidth);
+    mgState.locked = false;
+    mgState.lastResult = null;
+  }
+
+  // Mini-game input
+  mgCanvas.addEventListener('mousemove', (e) => {
+    if (mgState && mgState.kind === 'coconut') {
+      const rect = mgCanvas.getBoundingClientRect();
+      mgState.basketX = (e.clientX - rect.left) * (mgCanvas.width / rect.width);
+    }
+  });
+  mgCanvas.addEventListener('pointerdown', (e) => {
+    if (mgState && mgState.kind === 'fishing' && !mgState.locked) {
+      lockFishing();
+    }
+  });
+  window.addEventListener('keydown', (e) => {
+    if (!mgState) return;
+    if (mgState.kind === 'fishing' && e.key === ' ' && !mgState.locked) {
+      e.preventDefault();
+      lockFishing();
+    }
+  });
+
+  function lockFishing() {
+    const s = mgState;
+    if (s.pos >= s.zoneStart && s.pos <= s.zoneStart + s.zoneWidth) {
+      // Hit — closer to center = more
+      const center = s.zoneStart + s.zoneWidth / 2;
+      const off = Math.abs(s.pos - center) / (s.zoneWidth / 2);
+      const fishGold = Math.round(15 - off * 8);
+      s.score += fishGold;
+      s.earned += fishGold;
+      s.lastResult = { ok: true, gold: fishGold };
+    } else {
+      s.lastResult = { ok: false, gold: 0 };
+    }
+    s.locked = true;
+    setTimeout(() => {
+      if (!mgState) return;
+      mgState.round++;
+      if (mgState.round >= mgState.maxRounds) {
+        showMsg(`Fishing done! +${mgState.earned} gold`);
+        closeMiniGame();
+      } else {
+        newFishingRound();
+      }
+    }, 900);
+  }
+
+  function updateMiniGame() {
+    if (!mgState) return;
+    if (mgState.kind === 'coconut') {
+      const s = mgState;
+      const now = performance.now();
+      s.time = Math.max(0, 30 - Math.floor((now - s.started) / 1000));
+      mgTimeEl.textContent = s.time;
+      if (s.time <= 0) {
+        showMsg(`Coconut Catch done! +${s.earned} gold`);
+        closeMiniGame();
+        return;
+      }
+      // Spawn
+      s.spawnT--;
+      if (s.spawnT <= 0) {
+        const isBomb = Math.random() < 0.18;
+        const isGold = !isBomb && Math.random() < 0.10;
+        s.coconuts.push({
+          x: rand(20, mgCanvas.width - 20),
+          y: -20,
+          vy: rand(3, 5),
+          type: isBomb ? 'bomb' : (isGold ? 'gold' : 'normal'),
+        });
+        s.spawnT = Math.floor(rand(22, 50));
+      }
+      // Update coconuts
+      const basketY = mgCanvas.height - 30;
+      for (let i = s.coconuts.length - 1; i >= 0; i--) {
+        const c = s.coconuts[i];
+        c.y += c.vy;
+        // Catch?
+        if (c.y > basketY - 10 && c.y < basketY + 18 && Math.abs(c.x - s.basketX) < 28) {
+          if (c.type === 'bomb') {
+            s.earned = Math.max(0, s.earned - 5);
+            showFloatScore(c.x, basketY - 10, '-5', '#e53935');
+          } else if (c.type === 'gold') {
+            s.earned += 15;
+            s.score += 15;
+            showFloatScore(c.x, basketY - 10, '+15', '#ffc107');
+          } else {
+            s.earned += 3;
+            s.score += 3;
+            showFloatScore(c.x, basketY - 10, '+3', '#fff');
+          }
+          s.coconuts.splice(i, 1);
+          continue;
+        }
+        if (c.y > mgCanvas.height + 20) s.coconuts.splice(i, 1);
+      }
+      mgScoreEl.textContent = s.earned;
+      // Keyboard movement
+      if (keys['arrowleft'] || keys['a']) s.basketX -= 5;
+      if (keys['arrowright'] || keys['d']) s.basketX += 5;
+      s.basketX = clamp(s.basketX, 30, mgCanvas.width - 30);
+    } else if (mgState.kind === 'fishing') {
+      const s = mgState;
+      if (!s.locked) {
+        s.pos += s.vel;
+        if (s.pos > 1) { s.pos = 1; s.vel = -Math.abs(s.vel); }
+        if (s.pos < 0) { s.pos = 0; s.vel = Math.abs(s.vel); }
+      }
+      mgScoreEl.textContent = s.earned;
+      mgTimeEl.textContent = `${s.round}/${s.maxRounds}`;
+    }
+    drawMiniGame();
+  }
+
+  const floatScores = [];
+  function showFloatScore(x, y, text, color) {
+    floatScores.push({ x, y, text, color, life: 1 });
+  }
+
+  function drawMiniGame() {
+    const c = mgCtx;
+    c.clearRect(0, 0, mgCanvas.width, mgCanvas.height);
+    if (!mgState) return;
+    if (mgState.kind === 'coconut') {
+      // Sky
+      const g = c.createLinearGradient(0, 0, 0, mgCanvas.height);
+      g.addColorStop(0, '#81d4fa');
+      g.addColorStop(1, '#fff59d');
+      c.fillStyle = g;
+      c.fillRect(0, 0, mgCanvas.width, mgCanvas.height);
+      // Ground
+      c.fillStyle = '#fff59d';
+      c.fillRect(0, mgCanvas.height - 20, mgCanvas.width, 20);
+      // Palm trees at top
+      for (let i = 0; i < 3; i++) {
+        const x = 80 + i * 180;
+        c.fillStyle = '#6d4c41';
+        c.fillRect(x - 4, 0, 8, 50);
+        c.fillStyle = '#43a047';
+        for (let j = 0; j < 5; j++) {
+          const a = (j / 5) * Math.PI * 2;
+          c.save();
+          c.translate(x, 50);
+          c.rotate(a);
+          c.beginPath();
+          c.ellipse(15, 0, 18, 6, 0, 0, Math.PI * 2);
+          c.fill();
+          c.restore();
+        }
+      }
+      // Coconuts
+      for (const co of mgState.coconuts) {
+        if (co.type === 'bomb') {
+          c.fillStyle = '#212121';
+          c.beginPath();
+          c.arc(co.x, co.y, 10, 0, Math.PI * 2);
+          c.fill();
+          c.strokeStyle = '#ff6f00';
+          c.lineWidth = 2;
+          c.beginPath();
+          c.moveTo(co.x, co.y - 10);
+          c.lineTo(co.x + 4, co.y - 16);
+          c.stroke();
+          c.fillStyle = '#ffeb3b';
+          c.beginPath();
+          c.arc(co.x + 4, co.y - 16, 2, 0, Math.PI * 2);
+          c.fill();
+        } else if (co.type === 'gold') {
+          const grad = c.createRadialGradient(co.x - 3, co.y - 3, 2, co.x, co.y, 12);
+          grad.addColorStop(0, '#fff59d');
+          grad.addColorStop(1, '#ff8f00');
+          c.fillStyle = grad;
+          c.beginPath();
+          c.arc(co.x, co.y, 12, 0, Math.PI * 2);
+          c.fill();
+          c.fillStyle = '#fff';
+          c.beginPath();
+          c.arc(co.x - 4, co.y - 4, 2, 0, Math.PI * 2);
+          c.fill();
+        } else {
+          c.fillStyle = '#5d4037';
+          c.beginPath();
+          c.arc(co.x, co.y, 10, 0, Math.PI * 2);
+          c.fill();
+          c.fillStyle = '#3e2723';
+          c.beginPath();
+          c.arc(co.x - 3, co.y - 1, 1.5, 0, Math.PI * 2);
+          c.arc(co.x + 3, co.y - 1, 1.5, 0, Math.PI * 2);
+          c.arc(co.x, co.y + 3, 1.5, 0, Math.PI * 2);
+          c.fill();
+        }
+      }
+      // Basket
+      const bx = mgState.basketX, by = mgCanvas.height - 30;
+      c.fillStyle = '#8d6e63';
+      c.beginPath();
+      c.moveTo(bx - 30, by);
+      c.lineTo(bx + 30, by);
+      c.lineTo(bx + 22, by + 18);
+      c.lineTo(bx - 22, by + 18);
+      c.closePath();
+      c.fill();
+      c.strokeStyle = '#3e2723';
+      c.lineWidth = 1.5;
+      for (let i = -2; i <= 2; i++) {
+        c.beginPath();
+        c.moveTo(bx + i * 10, by);
+        c.lineTo(bx + i * 8, by + 18);
+        c.stroke();
+      }
+      // Float scores
+      for (let i = floatScores.length - 1; i >= 0; i--) {
+        const f = floatScores[i];
+        c.globalAlpha = f.life;
+        c.fillStyle = f.color;
+        c.font = 'bold 18px Trebuchet MS';
+        c.textAlign = 'center';
+        c.fillText(f.text, f.x, f.y);
+        f.y -= 1.5;
+        f.life -= 0.025;
+        if (f.life <= 0) floatScores.splice(i, 1);
+      }
+      c.globalAlpha = 1;
+    } else if (mgState.kind === 'fishing') {
+      // Background — water
+      const g = c.createLinearGradient(0, 0, 0, mgCanvas.height);
+      g.addColorStop(0, '#4fc3f7');
+      g.addColorStop(1, '#0277bd');
+      c.fillStyle = g;
+      c.fillRect(0, 0, mgCanvas.width, mgCanvas.height);
+      // Dock
+      c.fillStyle = '#6d4c41';
+      c.fillRect(0, 200, mgCanvas.width, 12);
+      // Figure with rod
+      c.fillStyle = '#3e2723';
+      c.fillRect(50, 160, 10, 40);
+      c.fillStyle = '#ffccbc';
+      c.beginPath();
+      c.arc(55, 155, 8, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = '#5d4037';
+      c.lineWidth = 2;
+      c.beginPath();
+      c.moveTo(60, 170);
+      c.lineTo(180, 100);
+      c.stroke();
+      // Line down
+      c.strokeStyle = '#fff';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(180, 100);
+      c.lineTo(200, 240);
+      c.stroke();
+      // Fish under water
+      for (let i = 0; i < 4; i++) {
+        const fy = 230 + i * 18;
+        const fx = 200 + Math.sin(performance.now() / 500 + i) * 20;
+        c.fillStyle = ['#ff7043','#ffd54f','#4dd0e1','#ba68c8'][i];
+        c.beginPath();
+        c.ellipse(fx, fy, 8, 4, 0, 0, Math.PI * 2);
+        c.fill();
+        c.beginPath();
+        c.moveTo(fx - 7, fy); c.lineTo(fx - 12, fy - 3); c.lineTo(fx - 12, fy + 3); c.closePath();
+        c.fill();
+      }
+
+      // Casting bar
+      const barX = 60, barY = 60, barW = mgCanvas.width - 120, barH = 24;
+      c.fillStyle = 'rgba(0,0,0,0.4)';
+      c.fillRect(barX, barY, barW, barH);
+      // Green zone
+      const s = mgState;
+      c.fillStyle = '#4caf50';
+      c.fillRect(barX + s.zoneStart * barW, barY, s.zoneWidth * barW, barH);
+      // Bullseye stripe in middle
+      c.fillStyle = '#ffeb3b';
+      const center = s.zoneStart + s.zoneWidth / 2;
+      c.fillRect(barX + center * barW - 2, barY, 4, barH);
+      // Border
+      c.strokeStyle = '#ffe082';
+      c.lineWidth = 2;
+      c.strokeRect(barX, barY, barW, barH);
+      // Marker
+      const mx = barX + s.pos * barW;
+      c.fillStyle = '#fff';
+      c.beginPath();
+      c.moveTo(mx, barY - 6);
+      c.lineTo(mx - 6, barY - 14);
+      c.lineTo(mx + 6, barY - 14);
+      c.closePath();
+      c.fill();
+      c.fillRect(mx - 1, barY - 4, 2, barH + 8);
+
+      // Result
+      if (s.lastResult) {
+        c.font = 'bold 28px Trebuchet MS';
+        c.textAlign = 'center';
+        c.fillStyle = s.lastResult.ok ? '#4caf50' : '#e53935';
+        c.fillText(s.lastResult.ok ? `Caught! +${s.lastResult.gold}g` : 'Missed!', mgCanvas.width / 2, 140);
+      } else {
+        c.font = 'bold 16px Trebuchet MS';
+        c.textAlign = 'center';
+        c.fillStyle = '#fff';
+        c.fillText(`Round ${s.round + 1} of ${s.maxRounds} — click in the green!`, mgCanvas.width / 2, 140);
+      }
+    }
+  }
+
+  // -------- Messages --------
   const msgEl = document.getElementById('message');
   let msgTimer = null;
   function showMsg(text) {
@@ -1009,33 +2001,44 @@
     clearTimeout(msgTimer);
     msgTimer = setTimeout(() => msgEl.classList.remove('show'), 2200);
   }
+  const toastEl = document.getElementById('toast');
+  let toastTimer = null;
+  function showToast(text) {
+    toastEl.textContent = text;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
+  }
 
-  // Start screen
+  // -------- Start --------
   document.getElementById('start-btn').addEventListener('click', () => {
     document.getElementById('start-screen').style.display = 'none';
     state.started = true;
     showMsg('Sail out and gather treasures!');
   });
 
-  // Main loop
+  // -------- Main loop --------
   let last = performance.now();
   function loop(now) {
     const dt = Math.min(now - last, 33) / 16.67;
     last = now;
 
-    if (state.started && !state.shopOpen) {
+    if (state.started && !state.shopOpen && !state.miniGameOpen) {
       updateBoat(dt);
       updateItems();
       checkIsland();
     }
     updateNPCs();
     updateCamera();
+    if (state.miniGameOpen) updateMiniGame();
 
     drawOcean();
-    drawIsland();
+    drawIslands();
     drawItems();
     drawFishes();
+    drawWildCreatures();
     drawBoat();
+    drawPets();
     drawSparkles();
     drawClouds();
     drawCompass();
