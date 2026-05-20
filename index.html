@@ -274,11 +274,76 @@
     text-shadow: 1px 1px 0 #003c5a;
   }
   #befriend-prompt:hover { background: rgba(0, 90, 130, 0.95); }
+
+  /* Vignette for depth */
+  #vignette {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 50%, rgba(0,0,0,0.45) 100%);
+  }
+
+  /* On-screen joystick */
+  #joystick {
+    position: fixed;
+    left: 24px;
+    bottom: 24px;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.25), rgba(0,40,60,0.4));
+    border: 3px solid rgba(255, 224, 130, 0.85);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5), inset 0 0 25px rgba(255,255,255,0.15);
+    touch-action: none;
+    z-index: 4;
+    display: none;
+    user-select: none;
+  }
+  #joystick.visible { display: block; }
+  #stick {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 60px;
+    height: 60px;
+    margin-left: -30px;
+    margin-top: -30px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffe082, #d84315);
+    border: 3px solid #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.45);
+    pointer-events: none;
+    transition: transform 0.05s linear;
+  }
+  #stick.dragging { transition: none; }
+  #joystick-hint {
+    position: absolute;
+    bottom: -24px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 13px;
+    color: #fff;
+    text-shadow: 1px 1px 0 #003c5a;
+    pointer-events: none;
+  }
+
+  @media (max-width: 800px) {
+    #hud { font-size: 16px; }
+    #hud .panel { padding: 6px 10px; }
+  }
 </style>
 </head>
 <body>
 
 <canvas id="game"></canvas>
+<div id="vignette"></div>
+
+<div id="joystick">
+  <div id="stick"></div>
+  <div id="joystick-hint">drag to sail</div>
+</div>
 
 <div id="hud">
   <div class="panel">
@@ -438,7 +503,11 @@
     vx: 0, vy: 0,
     angle: 0,
     targetAngle: 0,
+    bank: 0,    // visual roll (banks into turns)
+    pitch: 0,   // visual pitch (lifts nose when accelerating)
   };
+  const wakeTrail = []; // foam particles trailing the boat
+  const joystick = { active: false, dx: 0, dy: 0 };
 
   // -------- Item types --------
   const itemTypes = {
@@ -597,6 +666,62 @@
     if (state.nearWild) befriend(state.nearWild);
   });
 
+  // -------- On-screen joystick --------
+  const joyEl = document.getElementById('joystick');
+  const stickEl = document.getElementById('stick');
+  const JOY_RADIUS = 50;
+  // Show joystick on touch devices (or any device where pointer touch was used)
+  const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  if (isTouchDevice) joyEl.classList.add('visible');
+
+  let joyPointerId = null;
+  function joyCenter() {
+    const r = joyEl.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+  function joyMove(clientX, clientY) {
+    const c = joyCenter();
+    let dx = clientX - c.x;
+    let dy = clientY - c.y;
+    const d = Math.hypot(dx, dy);
+    if (d > JOY_RADIUS) { dx = (dx / d) * JOY_RADIUS; dy = (dy / d) * JOY_RADIUS; }
+    stickEl.style.transform = `translate(${dx}px, ${dy}px)`;
+    joystick.dx = dx / JOY_RADIUS;
+    joystick.dy = dy / JOY_RADIUS;
+  }
+  function joyEnd() {
+    joystick.active = false;
+    joystick.dx = 0;
+    joystick.dy = 0;
+    stickEl.style.transform = 'translate(0px, 0px)';
+    stickEl.classList.remove('dragging');
+    joyPointerId = null;
+  }
+  joyEl.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    // If user touched the screen, make sure joystick is visible from now on
+    joyEl.classList.add('visible');
+    joyPointerId = e.pointerId;
+    joystick.active = true;
+    stickEl.classList.add('dragging');
+    joyEl.setPointerCapture(e.pointerId);
+    joyMove(e.clientX, e.clientY);
+  });
+  joyEl.addEventListener('pointermove', (e) => {
+    if (joyPointerId !== e.pointerId) return;
+    joyMove(e.clientX, e.clientY);
+  });
+  joyEl.addEventListener('pointerup', (e) => {
+    if (joyPointerId !== e.pointerId) return;
+    joyEnd();
+  });
+  joyEl.addEventListener('pointercancel', (e) => {
+    if (joyPointerId !== e.pointerId) return;
+    joyEnd();
+  });
+  // Also reveal the joystick on first touch anywhere
+  window.addEventListener('touchstart', () => joyEl.classList.add('visible'), { once: true });
+
   function befriend(c) {
     if (state.pets[c.kind]) {
       showMsg(`You already have a ${c.kind} friend! Find a new creature.`);
@@ -637,6 +762,12 @@
       const m = Math.hypot(ax, ay) || 1;
       boat.vx += (ax / m) * accel;
       boat.vy += (ay / m) * accel;
+    } else if (joystick.active && (joystick.dx !== 0 || joystick.dy !== 0)) {
+      state.target = null;
+      const m = Math.hypot(joystick.dx, joystick.dy) || 1;
+      const mag = Math.min(1, m);
+      boat.vx += (joystick.dx / m) * accel * mag;
+      boat.vy += (joystick.dy / m) * accel * mag;
     } else if (state.target) {
       const dx = state.target.x - boat.x;
       const dy = state.target.y - boat.y;
@@ -679,13 +810,37 @@
       }
     }
 
-    if (Math.hypot(boat.vx, boat.vy) > 0.15) {
+    const speed = Math.hypot(boat.vx, boat.vy);
+    if (speed > 0.15) {
       boat.targetAngle = Math.atan2(boat.vy, boat.vx);
     }
     let diff = boat.targetAngle - boat.angle;
     while (diff > Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
-    boat.angle += diff * 0.12;
+    const turn = diff * 0.12;
+    boat.angle += turn;
+
+    // Bank into turns; smooth back when straight
+    const targetBank = clamp(-turn * 6, -0.6, 0.6) * Math.min(1, speed / 1.5);
+    boat.bank += (targetBank - boat.bank) * 0.15;
+    // Pitch up slightly when accelerating
+    const targetPitch = clamp(speed / speedMax(), 0, 1) * 0.18;
+    boat.pitch += (targetPitch - boat.pitch) * 0.08;
+
+    // Drop wake foam behind the boat
+    if (speed > 0.4) {
+      const back = boat.angle + Math.PI;
+      const sx = boat.x + Math.cos(back) * 24 * hullScale();
+      const sy = boat.y + Math.sin(back) * 24 * hullScale();
+      const spread = 6;
+      wakeTrail.push({
+        x: sx + rand(-spread, spread),
+        y: sy + rand(-spread, spread),
+        r: rand(6, 10) * hullScale(),
+        life: 1,
+      });
+      if (wakeTrail.length > 80) wakeTrail.shift();
+    }
   }
 
   function updateItems() {
@@ -845,13 +1000,54 @@
   }
 
   function drawOcean() {
+    // Deep water with vertical gradient for depth
     const g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, '#4fc3f7');
     g.addColorStop(0.5, '#29b6f6');
-    g.addColorStop(1, '#0277bd');
+    g.addColorStop(1, '#01579b');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
+    // Animated caustic stripes — give the water a shimmering depth
+    const t = performance.now() / 1000;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 18;
+    for (let i = -2; i < 12; i++) {
+      const yBase = (i * 110 + (t * 14) % 110) - cam.y * 0.4 % 110;
+      ctx.beginPath();
+      for (let x = -20; x <= W + 20; x += 30) {
+        const y = yBase + Math.sin((x + cam.x) * 0.012 + t * 0.8) * 12
+                        + Math.cos((x + cam.x) * 0.005 + t * 0.4) * 6;
+        if (x === -20) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Sun glints from upper-left direction
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(0, 0, W, H * 0.35);
+
+    // Cloud shadows drifting on the water (drawn before items but on water)
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    for (const c of state.clouds) {
+      const sx = c.x - cam.x * 0.85 + 30;
+      const sy = c.y - cam.y * 0.85 + 60;
+      if (sx < -100 || sx > W + 100 || sy < -100 || sy > H + 100) continue;
+      const grd = ctx.createRadialGradient(sx, sy, c.r * 0.2, sx, sy, c.r * 1.3);
+      grd.addColorStop(0, 'rgba(60, 90, 120, 0.55)');
+      grd.addColorStop(1, 'rgba(60, 90, 120, 0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, c.r * 1.3, c.r * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Wave highlights
     ctx.strokeStyle = 'rgba(255,255,255,0.55)';
     ctx.lineWidth = 2;
     for (const w of state.waves) {
@@ -865,6 +1061,30 @@
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
+  }
+
+  function drawWakeTrail() {
+    for (let i = wakeTrail.length - 1; i >= 0; i--) {
+      const w = wakeTrail[i];
+      w.life -= 0.018;
+      w.r *= 1.012;
+      if (w.life <= 0) { wakeTrail.splice(i, 1); continue; }
+      const sx = w.x - cam.x, sy = w.y - cam.y;
+      ctx.globalAlpha = w.life * 0.55;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(sx, sy, w.r * w.life, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Drop-shadow helper for any object — gives 3D grounding
+  function drawShadow(sx, sy, rx, ry) {
+    ctx.fillStyle = 'rgba(0, 30, 60, 0.35)';
+    ctx.beginPath();
+    ctx.ellipse(sx + 4, sy + 6, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   function drawIslands() {
@@ -896,20 +1116,56 @@
         continue;
       }
 
-      // Sand ring
+      // Underwater glow (lighter sand visible through shallow water)
+      const shallow = ctx.createRadialGradient(sx, sy, isl.r * 0.8, sx, sy, isl.r * 1.4);
+      shallow.addColorStop(0, 'rgba(255, 245, 200, 0.35)');
+      shallow.addColorStop(1, 'rgba(255, 245, 200, 0)');
+      ctx.fillStyle = shallow;
+      ctx.beginPath();
+      ctx.arc(sx, sy, isl.r * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Island drop shadow (ground shadow on the water)
+      ctx.fillStyle = 'rgba(0, 30, 60, 0.35)';
+      ctx.beginPath();
+      ctx.ellipse(sx + 8, sy + 12, isl.r * 1.02, isl.r * 0.95, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sand ring (with light/dark side for dome effect)
       ctx.fillStyle = isl.sand;
       ctx.beginPath();
       ctx.arc(sx, sy, isl.r, 0, Math.PI * 2);
       ctx.fill();
-      // Grass
+      // Sand shading — darker side
+      const sandShade = ctx.createRadialGradient(sx - isl.r * 0.4, sy - isl.r * 0.4, isl.r * 0.2,
+                                                  sx + isl.r * 0.3, sy + isl.r * 0.3, isl.r);
+      sandShade.addColorStop(0, 'rgba(255,255,255,0)');
+      sandShade.addColorStop(1, 'rgba(60, 40, 20, 0.35)');
+      ctx.fillStyle = sandShade;
+      ctx.beginPath();
+      ctx.arc(sx, sy, isl.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Grass (elevation layer)
       ctx.fillStyle = isl.grass;
       ctx.beginPath();
-      ctx.arc(sx, sy, isl.r * 0.78, 0, Math.PI * 2);
+      ctx.arc(sx - 2, sy - 4, isl.r * 0.78, 0, Math.PI * 2);
       ctx.fill();
-      // Inner
+
+      // Inner darker layer (top of dome)
       ctx.fillStyle = isl.innerGrass;
       ctx.beginPath();
-      ctx.arc(sx - 10, sy - 8, isl.r * 0.55, 0, Math.PI * 2);
+      ctx.arc(sx - 8, sy - 12, isl.r * 0.55, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Highlight on NW side — sun on the dome
+      const hl = ctx.createRadialGradient(sx - isl.r * 0.35, sy - isl.r * 0.45, 2,
+                                          sx - isl.r * 0.35, sy - isl.r * 0.45, isl.r * 0.7);
+      hl.addColorStop(0, 'rgba(255,255,255,0.45)');
+      hl.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = hl;
+      ctx.beginPath();
+      ctx.arc(sx - 8, sy - 12, isl.r * 0.7, 0, Math.PI * 2);
       ctx.fill();
 
       if (isl.id === 'home') {
@@ -1031,15 +1287,23 @@
   function drawBoat() {
     const sx = boat.x - cam.x, sy = boat.y - cam.y;
     const scale = hullScale();
+    // Drop shadow on the water (offset, not banked)
+    ctx.save();
+    ctx.translate(sx + 6, sy + 8);
+    ctx.rotate(boat.angle);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = 'rgba(0, 30, 60, 0.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 26, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
     ctx.save();
     ctx.translate(sx, sy);
     ctx.rotate(boat.angle);
+    // Apply bank (roll into turns) via Y-skew, and pitch (nose up) via X-scale
+    ctx.transform(1 + boat.pitch * 0.1, 0, boat.bank * 0.3, 1 - Math.abs(boat.bank) * 0.18, 0, -boat.bank * 3);
     ctx.scale(scale, scale);
-
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.beginPath();
-    ctx.ellipse(-30, 0, 18, 6, 0, 0, Math.PI * 2);
-    ctx.fill();
 
     ctx.fillStyle = '#6d4c41';
     ctx.beginPath();
@@ -1115,6 +1379,7 @@
       const angle = boat.angle + Math.PI + (idx * 0.4 - 0.2);
       const x = boat.x + Math.cos(angle) * offset;
       const y = boat.y + Math.sin(angle) * offset;
+      drawShadow(x - cam.x, y - cam.y + 12, 16, 5);
       drawDolphin(x - cam.x, y - cam.y, boat.angle, performance.now() / 200);
       idx++;
     }
@@ -1122,6 +1387,7 @@
       const angle = boat.angle + Math.PI + (idx * 0.4 - 0.2);
       const x = boat.x + Math.cos(angle) * offset;
       const y = boat.y + Math.sin(angle) * offset;
+      drawShadow(x - cam.x, y - cam.y + 12, 14, 5);
       drawTurtle(x - cam.x, y - cam.y, boat.angle, performance.now() / 250);
       idx++;
     }
@@ -1210,8 +1476,16 @@
   function drawWildCreatures() {
     for (const c of state.wildCreatures) {
       const sx = c.x - cam.x;
-      const sy = c.y - cam.y + Math.sin(c.bob) * 2;
+      const bob = Math.sin(c.bob) * 2;
+      const sy = c.y - cam.y + bob;
       if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) continue;
+      // Shadow that shrinks when creature rises
+      const liftFactor = 1 - (bob + 2) / 8;
+      ctx.fillStyle = `rgba(0, 30, 60, ${0.3 * liftFactor})`;
+      ctx.beginPath();
+      ctx.ellipse(sx + 4, sy + 14, 16 * liftFactor, 5 * liftFactor, 0, 0, Math.PI * 2);
+      ctx.fill();
+
       ctx.save();
       // Highlight when near
       if (c === state.nearWild) {
@@ -2033,6 +2307,7 @@
     if (state.miniGameOpen) updateMiniGame();
 
     drawOcean();
+    drawWakeTrail();
     drawIslands();
     drawItems();
     drawFishes();
