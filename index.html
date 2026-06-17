@@ -444,6 +444,88 @@
     font-family: inherit;
   }
   #reset-btn:hover { color: #fff; border-color: #ffe082; }
+
+  /* Quest widget — Grandma Moana's current request */
+  #quest-widget {
+    position: fixed;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #ff8a65, #d84315);
+    border: 3px solid #ffe082;
+    border-radius: 16px;
+    padding: 8px 16px 8px 12px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 1px 1px 0 #b71c1c;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+    z-index: 4;
+    cursor: pointer;
+    user-select: none;
+    max-width: 90vw;
+  }
+  #quest-widget.visible { display: flex; }
+  #quest-widget:hover { transform: translateX(-50%) scale(1.04); }
+  #quest-widget:active { transform: translateX(-50%) scale(0.97); }
+  #quest-portrait {
+    font-size: 32px;
+    background: #fff;
+    border: 2px solid #ffe082;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    text-align: center;
+    line-height: 40px;
+    flex-shrink: 0;
+  }
+  #quest-text {
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+    line-height: 1.2;
+  }
+  #quest-title { font-size: 16px; }
+  #quest-progress {
+    font-size: 13px;
+    opacity: 0.95;
+    margin-top: 1px;
+  }
+  #quest-dots {
+    display: inline-flex;
+    gap: 3px;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+  .qdot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.35);
+    border: 1px solid rgba(255,255,255,0.6);
+  }
+  .qdot.done {
+    background: #ffeb3b;
+    border-color: #fff8e1;
+    box-shadow: 0 0 4px #ffeb3b;
+  }
+  @keyframes questPop {
+    0% { transform: translateX(-50%) scale(0.6); opacity: 0; }
+    60% { transform: translateX(-50%) scale(1.15); opacity: 1; }
+    100% { transform: translateX(-50%) scale(1); }
+  }
+  #quest-widget.popping { animation: questPop 0.6s cubic-bezier(.34,1.56,.64,1); }
+
+  @keyframes questDone {
+    0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,0.5); }
+    50% { box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 0 8px rgba(255,235,59,0.85); }
+  }
+  #quest-widget.celebrating {
+    animation: questDone 0.4s ease-in-out 3;
+    background: linear-gradient(135deg, #66bb6a, #2e7d32);
+  }
 </style>
 </head>
 <body>
@@ -452,6 +534,14 @@
 <div id="vignette"></div>
 
 <button id="mute-btn" title="Mute / unmute" aria-label="Mute">🔊</button>
+
+<div id="quest-widget" title="Tap to hear Grandma again">
+  <div id="quest-portrait">👵</div>
+  <div id="quest-text">
+    <div id="quest-title">—</div>
+    <div id="quest-progress">—</div>
+  </div>
+</div>
 
 <div id="joystick">
   <div id="stick"></div>
@@ -723,6 +813,8 @@
           totalCollected: state.totalCollected,
           tutorialSeen: state.tutorialSeen,
           muted: sfx.muted,
+          questIndex: state.questIndex,
+          questProgress: state.questProgress,
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
       } catch {}
@@ -749,6 +841,8 @@
       state.tutorialSeen = !!d.tutorialSeen;
       sfx.muted = !!d.muted;
       sfx.updateVolume();
+      if (typeof d.questIndex === 'number') state.questIndex = d.questIndex;
+      if (typeof d.questProgress === 'number') state.questProgress = d.questProgress;
       return true;
     } catch { return false; }
   }
@@ -830,7 +924,68 @@
     autoSailTarget: null,    // island ref when using island-bar
     cargoFullWarned: false,  // so we only ping once per fill
     lastBonkAt: 0,
+    // Quest system
+    questIndex: 0,
+    questProgress: 0,
+    questCompletedCelebrate: 0, // countdown frames for big celebration
   };
+
+  // -------- Quests (Grandma Moana's story chain) --------
+  const QUESTS = [
+    { id: 'q1', title: 'Find 3 shells', icon: '🐚', target: 3,
+      track: { type: 'collect', what: 'shell' },
+      prompt: "Aloha little one! Bring me three shells!",
+      done: "Beautiful shells! Mahalo!", reward: 5 },
+    { id: 'q2', title: 'Sail home and sell', icon: '💰', target: 1,
+      track: { type: 'sell' },
+      prompt: "Sail to my island to give me your treasures!",
+      done: "Look at all that gold!", reward: 5 },
+    { id: 'q3', title: 'Buy an upgrade', icon: '⭐', target: 1,
+      track: { type: 'upgrade' },
+      prompt: "Use gold to make your boat better!",
+      done: "Such a fine boat!", reward: 5 },
+    { id: 'q4', title: 'Find 4 starfish', icon: '🌟', target: 4,
+      track: { type: 'collect', what: 'starfish' },
+      prompt: "Now find four sparkly starfish!",
+      done: "They dance in the night sky!", reward: 10 },
+    { id: 'q5', title: 'Make a sea friend', icon: '🐬', target: 1,
+      track: { type: 'befriend' },
+      prompt: "Make a friend in the sea! A dolphin or a turtle!",
+      done: "A new friend! How sweet!", reward: 15 },
+    { id: 'q6', title: 'Sail to Reef Atoll', icon: '🐠', target: 1,
+      track: { type: 'visit', what: 'reef' },
+      prompt: "Sail far to Reef Atoll! My cousin lives there!",
+      done: "You found Reef Atoll!", reward: 10 },
+    { id: 'q7', title: 'Find 4 corals', icon: '🪸', target: 4,
+      track: { type: 'collect', what: 'coral' },
+      prompt: "The reef has pretty coral. Bring me four!",
+      done: "These will look pretty in my hair!", reward: 15 },
+    { id: 'q8', title: 'Play a game', icon: '🎮', target: 1,
+      track: { type: 'minigame' },
+      prompt: "Play a fun game at one of my islands!",
+      done: "What fun!", reward: 10 },
+    { id: 'q9', title: 'Find 3 pearls', icon: '🦪', target: 3,
+      track: { type: 'collect', what: 'pearl' },
+      prompt: "Find three shiny pearls!",
+      done: "So shiny!", reward: 20 },
+    { id: 'q10', title: 'Find rare treasure', icon: '✨', target: 1,
+      track: { type: 'collect_rare' },
+      prompt: "Golden treasure floats in the sea. Find some!",
+      done: "Real treasure! How brave!", reward: 25 },
+    { id: 'q11', title: 'Both sea friends', icon: '🐢', target: 1,
+      track: { type: 'both_pets' },
+      prompt: "Befriend a dolphin AND a turtle!",
+      done: "You are kind to all sea creatures!", reward: 25 },
+    { id: 'q12', title: 'Sail to Volcano Island', icon: '🌋', target: 1,
+      track: { type: 'visit', what: 'volcano' },
+      prompt: "A volcano island awaits! Make your boat faster!",
+      done: "You climbed to the volcano!", reward: 30 },
+    { id: 'q13', title: 'Sail to Pearl Atoll', icon: '💎', target: 1,
+      track: { type: 'visit', what: 'pearl' },
+      prompt: "A magical island shines far away!",
+      done: "Pearl Atoll! What beauty!", reward: 40 },
+  ];
+  function currentQuest() { return QUESTS[state.questIndex] || null; }
 
   // Bigger starting cargo (5) so a kid sees progress faster
   function cargoMax() { return 5 + state.upgrades.cargo.level * 2 + (state.pets.turtle ? 2 : 0); }
@@ -1048,6 +1203,18 @@
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
     const worldPt = { x: cx + cam.x, y: unprojY(cy) };
+    // Tap on Grandma Moana? Replay the current quest prompt.
+    const home = islandById('home');
+    if (home) {
+      const grassLift = home.r * 0.12;
+      const gx = (home.x + 22) - cam.x;
+      const gy = projY(home.y) + 10 - grassLift - 6;
+      if (((cx - gx) ** 2 + (cy - gy) ** 2) < 36 * 36) {
+        sfx.tap();
+        speakCurrentQuestPrompt();
+        return;
+      }
+    }
     // Did we click a wild creature? Compare in screen space (projected).
     for (const c of state.wildCreatures) {
       const ccx = (c.x - cam.x), ccy = projY(c.y);
@@ -1140,6 +1307,7 @@
     state.nearWild = null;
     document.getElementById('befriend-prompt').style.display = 'none';
     showToast(c.kind === 'dolphin' ? '🐬 Dolphin friend!' : '🐢 Turtle friend!');
+    handleQuestEvent('befriend', c.kind);
     saveGame();
     setTimeout(() => spawnWildCreature(c.kind), 25000);
   }
@@ -1317,10 +1485,12 @@
             sfx.rare();
             showToast(`★ ${t.name}! +${t.value}g ★`);
             speak('Treasure!');
+            handleQuestEvent('collect_rare', it.type);
           } else {
             sfx.pickup();
             showMsg(`+${t.value} gold!`);
           }
+          handleQuestEvent('collect', it.type);
           state.cargoFullWarned = false;
           // Advance tutorial step 0 -> 1
           if (state.tutorial.active && state.tutorial.step === 0) {
@@ -1521,7 +1691,9 @@
         showMsg(`Sold cargo for ${earned} gold!`);
         speak(`${earned} gold!`);
         saveGame();
+        handleQuestEvent('sell');
       }
+      handleQuestEvent('visit', near.id);
       // Advance tutorial step 1 -> 2
       if (state.tutorial.active && state.tutorial.step === 1) {
         state.tutorial.step = 2;
@@ -1746,6 +1918,8 @@
         drawPalm(sx - 30, sy - 28, 1);
         drawPalm(sx + 25, sy + 10, 0.85);
         drawPalm(sx + 5, sy - 45, 1.1);
+        // Grandma Moana waves from beside the hut
+        drawGrandma(sx + 22, sy + 10);
         // hut
         const hx = sx - 5, hy = sy + 25;
         ctx.fillStyle = '#6d4c41';
@@ -2539,19 +2713,62 @@
     ctx.globalAlpha = 1;
   }
 
-  // Pulsing ring on the next thing the player should aim for
+  // Pulsing ring on the next thing the player should aim for.
+  // Smart targeting: follows the active quest when possible.
   function drawWaypoint() {
     if (!state.started || state.shopOpen || state.miniGameOpen) return;
     let target = null;
-    // If cargo is mostly full, point home; else point at nearest item
-    if (state.cargo.length >= cargoMax() * 0.8 && state.cargo.length > 0) {
+    const q = currentQuest();
+    const cargoFullish = state.cargo.length >= cargoMax() * 0.8 && state.cargo.length > 0;
+
+    // Cargo nearly full overrides — go sell first
+    if (cargoFullish) {
       let bestD = Infinity;
       for (const isl of islands) {
         if (!isl.unlocked) continue;
         const d = Math.hypot(boat.x - isl.x, boat.y - isl.y);
         if (d < bestD) { bestD = d; target = isl; }
       }
-    } else {
+    }
+    // Quest "collect specific item"
+    else if (q && q.track.type === 'collect' && q.track.what) {
+      let bestD = Infinity;
+      for (const it of state.items) {
+        if (it.type !== q.track.what) continue;
+        const d = dist2(boat, it);
+        if (d < bestD) { bestD = d; target = it; }
+      }
+    }
+    // Quest "visit island"
+    else if (q && q.track.type === 'visit') {
+      const isl = islandById(q.track.what);
+      if (isl && isl.unlocked) target = isl;
+    }
+    // Quest "sell" or "upgrade" → head home
+    else if (q && (q.track.type === 'sell' || q.track.type === 'upgrade')) {
+      target = islandById('home');
+    }
+    // Quest "befriend" → point at nearest wild creature
+    else if (q && (q.track.type === 'befriend' || q.track.type === 'both_pets')) {
+      let bestD = Infinity;
+      for (const c of state.wildCreatures) {
+        if (state.pets[c.kind]) continue;
+        const d = dist2(boat, c);
+        if (d < bestD) { bestD = d; target = c; }
+      }
+    }
+    // Quest "collect_rare" → point at rare item if any visible
+    else if (q && q.track.type === 'collect_rare') {
+      let bestD = Infinity;
+      for (const it of state.items) {
+        if (!itemTypes[it.type].rare) continue;
+        const d = dist2(boat, it);
+        if (d < bestD) { bestD = d; target = it; }
+      }
+    }
+
+    // Fallback: any normal item nearby
+    if (!target) {
       let bestD = Infinity;
       for (const it of state.items) {
         if (itemTypes[it.type].rare) continue;
@@ -2770,6 +2987,11 @@
             state.tutorial.active = false;
             state.tutorialSeen = true;
             saveGame();
+            // Kick off quest 1 once the tutorial is dismissed
+            updateQuestWidget();
+            setTimeout(speakCurrentQuestPrompt, 1600);
+          } else {
+            handleQuestEvent('upgrade', key);
           }
         } else {
           sfx.tap();
@@ -2796,6 +3018,7 @@
     mgOverlay.style.display = 'block';
     if (kind === 'coconut') startCoconutGame();
     else if (kind === 'fishing') startFishingGame();
+    handleQuestEvent('minigame', kind);
   }
   function closeMiniGame() {
     state.miniGameOpen = false;
@@ -3193,6 +3416,238 @@
     toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
   }
 
+  // -------- Quest engine (Grandma Moana) --------
+  const questWidget = document.getElementById('quest-widget');
+  const questTitle = document.getElementById('quest-title');
+  const questProgressEl = document.getElementById('quest-progress');
+  const questPortrait = document.getElementById('quest-portrait');
+
+  function speakGrandma(text) {
+    // Slightly different voice (lower pitch + slower) for the elder
+    if (sfx.muted) return;
+    if (!('speechSynthesis' in window)) return;
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.95;
+      u.pitch = 1.15;
+      u.volume = 0.85;
+      const voices = speechSynthesis.getVoices();
+      const pref = voices.find(v =>
+        /female|samantha|karen|tessa|moira|google us english|en-us/i.test(v.name + ' ' + v.lang)
+      );
+      if (pref) u.voice = pref;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+      lastSpeakAt = performance.now();
+    } catch {}
+  }
+
+  function updateQuestWidget() {
+    const q = currentQuest();
+    if (!q || state.tutorial.active) {
+      questWidget.classList.remove('visible');
+      return;
+    }
+    questWidget.classList.add('visible');
+    questPortrait.textContent = q.icon;
+    questTitle.textContent = q.title;
+    if (q.target > 1) {
+      // Render dots showing progress
+      let dots = '<span id="quest-dots">';
+      for (let i = 0; i < Math.min(q.target, 8); i++) {
+        dots += `<span class="qdot${i < state.questProgress ? ' done' : ''}"></span>`;
+      }
+      dots += '</span>';
+      questProgressEl.innerHTML = `${state.questProgress}/${q.target}${dots}`;
+    } else {
+      questProgressEl.textContent = '(tap Grandma for help)';
+    }
+  }
+
+  function popQuestWidget() {
+    questWidget.classList.remove('popping');
+    void questWidget.offsetWidth;
+    questWidget.classList.add('popping');
+  }
+
+  function speakCurrentQuestPrompt() {
+    const q = currentQuest();
+    if (!q) {
+      speakGrandma('You finished everything! You are the queen of the ocean!');
+      return;
+    }
+    speakGrandma(q.prompt);
+    popQuestWidget();
+  }
+
+  // Big rainbow confetti — for quest complete celebration
+  function spawnConfetti(x, y) {
+    const colors = ['#ff5252', '#ffeb3b', '#4caf50', '#2196f3', '#9c27b0', '#ff9800', '#fff', '#e91e63'];
+    for (let i = 0; i < 60; i++) {
+      state.sparkles.push({
+        x, y,
+        vx: rand(-4.5, 4.5),
+        vy: rand(-7, -1.5),
+        life: 1.6,
+        color: colors[Math.floor(Math.random() * colors.length)],
+      });
+    }
+  }
+
+  function completeQuest() {
+    const q = currentQuest();
+    if (!q) return;
+    state.gold += q.reward;
+    sfx.upgrade();
+    showToast(`Quest done! +${q.reward}g`);
+    speakGrandma(q.done);
+    spawnConfetti(boat.x, boat.y);
+    questWidget.classList.add('celebrating');
+    setTimeout(() => questWidget.classList.remove('celebrating'), 1300);
+    state.questIndex++;
+    state.questProgress = 0;
+    saveGame();
+    updateQuestWidget();
+    // After the celebration, announce next quest
+    setTimeout(() => {
+      const next = currentQuest();
+      if (next) {
+        popQuestWidget();
+        showToast(`New quest: ${next.title}`);
+        setTimeout(() => speakGrandma(next.prompt), 600);
+      } else {
+        showToast('You finished all quests!');
+      }
+    }, 1800);
+  }
+
+  function handleQuestEvent(type, what) {
+    if (state.tutorial.active) return;
+    const q = currentQuest();
+    if (!q) return;
+    const t = q.track;
+
+    // Special: 'both_pets' — completes when both flags true
+    if (t.type === 'both_pets') {
+      if (type === 'befriend' && state.pets.dolphin && state.pets.turtle) {
+        completeQuest();
+      }
+      return;
+    }
+
+    // Normal tracking
+    if (t.type !== type) return;
+    if (t.what && t.what !== what && t.what !== 'any') return;
+    state.questProgress = (state.questProgress || 0) + 1;
+    if (state.questProgress >= (q.target || 1)) {
+      completeQuest();
+    } else {
+      updateQuestWidget();
+      saveGame();
+    }
+  }
+
+  // Tap quest widget to re-hear the current prompt
+  questWidget.addEventListener('click', () => {
+    sfx.tap();
+    speakCurrentQuestPrompt();
+  });
+
+  // -------- Grandma Moana NPC on Home Island --------
+  // She lives on top of the home dome, waving and inviting players.
+  // Drawn at offset relative to home island center.
+  function drawGrandma(sx, sy) {
+    const t = performance.now() / 600;
+    const wave = Math.sin(t * 1.6) * 3;
+    const bob = Math.sin(t) * 1.5;
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,30,60,0.30)';
+    ctx.beginPath();
+    ctx.ellipse(sx + 2, sy + 14, 14, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sarong (dress)
+    ctx.save();
+    ctx.translate(sx, sy + bob);
+    ctx.fillStyle = '#e91e63';
+    ctx.beginPath();
+    ctx.moveTo(-11, -2);
+    ctx.quadraticCurveTo(-14, 12, -8, 14);
+    ctx.lineTo(8, 14);
+    ctx.quadraticCurveTo(14, 12, 11, -2);
+    ctx.quadraticCurveTo(0, -4, -11, -2);
+    ctx.fill();
+    // Hibiscus dots on sarong
+    ctx.fillStyle = '#fff8e1';
+    [[-4, 4], [4, 7], [-2, 11], [6, 1], [-7, 9]].forEach(([px, py]) => {
+      ctx.beginPath(); ctx.arc(px, py, 1.6, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // Arms - one waving, one resting
+    ctx.fillStyle = '#d7a673';
+    // Resting arm
+    ctx.beginPath();
+    ctx.ellipse(-10, 2, 3, 6, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // Waving arm
+    ctx.save();
+    ctx.translate(10, -2);
+    ctx.rotate(wave * 0.15 - 0.3);
+    ctx.beginPath();
+    ctx.ellipse(0, -3, 3, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Hand
+    ctx.beginPath();
+    ctx.arc(0, -9, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Head
+    ctx.fillStyle = '#d7a673';
+    ctx.beginPath();
+    ctx.arc(0, -12, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // White hair bun
+    ctx.fillStyle = '#f5f5f5';
+    ctx.beginPath();
+    ctx.arc(0, -19, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(-6, -14, 4, 0, Math.PI * 2);
+    ctx.arc(6, -14, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hibiscus flower in hair
+    ctx.fillStyle = '#ff5252';
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(6 + Math.cos(a) * 2.5, -17 + Math.sin(a) * 2.5, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#ffeb3b';
+    ctx.beginPath();
+    ctx.arc(6, -17, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes (closed-smile when waving)
+    ctx.strokeStyle = '#3e2723';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.arc(-2.5, -12, 1.2, Math.PI * 1.05, Math.PI * 1.95, true);
+    ctx.arc(2.5, -12, 1.2, Math.PI * 1.05, Math.PI * 1.95, true);
+    ctx.stroke();
+
+    // Big smile
+    ctx.beginPath();
+    ctx.arc(0, -10, 3, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
   // -------- Island quick-travel bar --------
   const islandBarEl = document.getElementById('island-bar');
   // Friendly icons per island id
@@ -3252,6 +3707,11 @@
     if (!state.tutorialSeen) {
       state.tutorial = { active: true, step: 0 };
       setTimeout(() => speak('Find a shell!'), 500);
+    } else {
+      // Returning player — show current quest and speak its prompt
+      updateQuestWidget();
+      const q = currentQuest();
+      if (q) setTimeout(() => speakGrandma(q.prompt), 900);
     }
     document.getElementById('start-screen').style.display = 'none';
     state.started = true;
