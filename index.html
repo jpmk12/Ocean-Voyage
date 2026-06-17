@@ -20,7 +20,13 @@
     height: 100vh;
     background: linear-gradient(180deg, #4fc3f7 0%, #29b6f6 50%, #0277bd 100%);
     cursor: pointer;
+    transform-origin: center center;
   }
+  @keyframes camPunch {
+    0%, 100% { transform: scale(1); }
+    25% { transform: scale(1.06); }
+  }
+  #game.cam-punch { animation: camPunch 0.32s ease-out; }
   #hud {
     position: fixed;
     top: 12px;
@@ -1514,6 +1520,9 @@
     state.pets[c.kind] = true;
     sfx.pet();
     speak(c.kind === 'dolphin' ? 'Hi dolphin!' : 'Hi turtle!');
+    cameraPunch();
+    shake(6, 18);
+    spawnPopup(c.x, c.y, c.kind === 'dolphin' ? 'NEW FRIEND!' : 'NEW FRIEND!', '#ff80ab', true);
     for (let i = 0; i < 24; i++) {
       state.sparkles.push({
         x: c.x, y: c.y,
@@ -1533,7 +1542,184 @@
   }
 
   // -------- Camera --------
-  const cam = { x: 0, y: 0 };
+  const cam = { x: 0, y: 0, shakeX: 0, shakeY: 0, shakeAmp: 0, shakeT: 0, shakeMax: 0 };
+
+  // -------- Juice: screen shake, popups, coins, item leaps, combos --------
+  const popups = [];      // floating "+N" texts in world space
+  const coins = [];       // coins flying to the gold HUD on sell
+  const itemPops = [];    // ghost copies of picked-up items that leap then fade
+  const combo = { count: 0, lastAt: 0 };
+
+  function shake(amp, dur = 18) {
+    cam.shakeAmp = Math.max(cam.shakeAmp, amp);
+    cam.shakeMax = Math.max(cam.shakeMax, dur);
+    cam.shakeT = Math.max(cam.shakeT, dur);
+  }
+  function updateShake() {
+    if (cam.shakeT > 0) {
+      cam.shakeT--;
+      const t = cam.shakeT / cam.shakeMax;
+      cam.shakeX = (Math.random() * 2 - 1) * cam.shakeAmp * t;
+      cam.shakeY = (Math.random() * 2 - 1) * cam.shakeAmp * t * 0.7;
+      if (cam.shakeT <= 0) cam.shakeAmp = 0;
+    } else {
+      cam.shakeX = cam.shakeY = 0;
+    }
+  }
+  function cameraPunch() {
+    canvas.classList.remove('cam-punch');
+    void canvas.offsetWidth;
+    canvas.classList.add('cam-punch');
+  }
+
+  function spawnPopup(wx, wy, text, color = '#fff', big = false) {
+    popups.push({
+      x: wx, y: wy, text, color, big,
+      age: 0, life: big ? 70 : 50,
+      vy: big ? -1.1 : -0.9,
+    });
+  }
+  function updatePopups() {
+    for (let i = popups.length - 1; i >= 0; i--) {
+      const p = popups[i];
+      p.age++;
+      p.y += p.vy;
+      if (p.age >= p.life) popups.splice(i, 1);
+    }
+  }
+  function drawPopups() {
+    for (const p of popups) {
+      const sx = p.x - cam.x + cam.shakeX;
+      const sy = projY(p.y) + cam.shakeY;
+      const t = p.age / p.life;
+      const a = 1 - t * t;
+      const scale = p.big ? 1.6 + Math.sin(p.age * 0.25) * 0.05 : 1.1;
+      const size = Math.round(20 * scale);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.font = `bold ${size}px Trebuchet MS`;
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#3e2723';
+      ctx.fillStyle = p.color;
+      ctx.strokeText(p.text, sx, sy);
+      ctx.fillText(p.text, sx, sy);
+      ctx.restore();
+    }
+  }
+
+  function spawnItemPop(it) {
+    itemPops.push({
+      x: it.x, y: it.y,
+      type: it.type,
+      vx: rand(-0.4, 0.4),
+      vy: -2.6,
+      age: 0,
+      life: itemTypes[it.type].rare ? 36 : 22,
+      rot: it.rot || 0,
+    });
+  }
+  function updateItemPops() {
+    for (let i = itemPops.length - 1; i >= 0; i--) {
+      const p = itemPops[i];
+      p.age++;
+      p.x += p.vx;
+      p.y += p.vy * 0.6;
+      p.vy *= 0.94;
+      if (p.age >= p.life) itemPops.splice(i, 1);
+    }
+  }
+  function drawItemPops() {
+    for (const p of itemPops) {
+      const sx = p.x - cam.x;
+      const sy = projY(p.y);
+      const t = p.age / p.life;
+      const scale = 1 + t * 0.9;
+      const a = 1 - t * t;
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.translate(sx, sy);
+      ctx.scale(scale, scale);
+      itemTypes[p.type].draw(ctx, 0, 0, p.rot);
+      ctx.restore();
+    }
+  }
+
+  // Coin shower — coins arc from the boat to the gold HUD element
+  function spawnCoinShower(earned) {
+    const goldElLocal = document.getElementById('gold');
+    if (!goldElLocal) return;
+    const rect = goldElLocal.getBoundingClientRect();
+    const tx = rect.x + rect.width / 2;
+    const ty = rect.y + rect.height / 2;
+    const startX = boat.x - cam.x;
+    const startY = projY(boat.y);
+    const count = Math.min(18, Math.max(4, Math.floor(earned / 4)));
+    for (let i = 0; i < count; i++) {
+      coins.push({
+        x: startX + rand(-12, 12), y: startY + rand(-8, 8),
+        tx, ty,
+        age: 0,
+        life: 55 + i * 2,
+        delay: i * 2,
+      });
+    }
+  }
+  function updateCoins() {
+    for (let i = coins.length - 1; i >= 0; i--) {
+      const c = coins[i];
+      c.age++;
+      if (c.age >= c.life) coins.splice(i, 1);
+    }
+  }
+  function drawCoins() {
+    for (const c of coins) {
+      if (c.age < c.delay) continue;
+      const t = Math.min(1, (c.age - c.delay) / (c.life - c.delay));
+      const ease = t * t * (3 - 2 * t);
+      const arcH = Math.min(140, Math.hypot(c.tx - c.x, c.ty - c.y) * 0.45);
+      const midX = (c.x + c.tx) / 2;
+      const midY = Math.min(c.y, c.ty) - arcH;
+      const x = (1 - ease) ** 2 * c.x + 2 * (1 - ease) * ease * midX + ease ** 2 * c.tx;
+      const y = (1 - ease) ** 2 * c.y + 2 * (1 - ease) * ease * midY + ease ** 2 * c.ty;
+      const spin = Math.abs(Math.cos(c.age * 0.5));
+      ctx.save();
+      ctx.fillStyle = '#ffc107';
+      ctx.beginPath();
+      ctx.ellipse(x, y, 7 * spin + 0.5, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#bf6f00';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      // sparkle
+      ctx.fillStyle = '#fff8e1';
+      ctx.beginPath();
+      ctx.ellipse(x - 2, y - 2, 2 * spin, 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function registerCombo() {
+    const now = performance.now();
+    if (now - combo.lastAt > 3000) combo.count = 1;
+    else combo.count++;
+    combo.lastAt = now;
+
+    let bonus = 0, label = '';
+    if (combo.count === 3)      { bonus = 3;  label = 'STREAK x3!'; }
+    else if (combo.count === 5) { bonus = 8;  label = 'SUPER STREAK!'; }
+    else if (combo.count === 8) { bonus = 15; label = 'MEGA STREAK!'; }
+    else if (combo.count === 12){ bonus = 30; label = 'UNSTOPPABLE!'; }
+
+    if (bonus > 0) {
+      state.gold += bonus;
+      spawnPopup(boat.x, boat.y, label, '#ff5252', true);
+      setTimeout(() => spawnPopup(boat.x, boat.y, `+${bonus}g`, '#ffeb3b', false), 200);
+      sfx.rare();
+      shake(7, 14);
+    }
+  }
 
   // -------- Game logic --------
   function updateBoat(dt) {
@@ -1700,16 +1886,21 @@
               life: 1, color: col,
             });
           }
+          spawnItemPop(it);
+          spawnPopup(it.x, it.y, `+${t.value}g`, t.rare ? '#ffeb3b' : '#fff', t.rare);
           state.items.splice(i, 1);
           if (t.rare) {
             sfx.rare();
             showToast(`★ ${t.name}! +${t.value}g ★`);
             speak('Treasure!');
+            shake(12, 24);
+            cameraPunch();
             handleQuestEvent('collect_rare', it.type);
           } else {
             sfx.pickup();
-            showMsg(`+${t.value} gold!`);
+            shake(2.5, 6);
           }
+          registerCombo();
           handleQuestEvent('collect', it.type);
           checkAchievements();
           state.cargoFullWarned = false;
@@ -1912,6 +2103,9 @@
         sfx.sell();
         showMsg(`Sold cargo for ${earned} gold!`);
         speak(`${earned} gold!`);
+        spawnCoinShower(earned);
+        spawnPopup(boat.x, boat.y, `+${earned} GOLD!`, '#ffeb3b', true);
+        shake(5, 14);
         saveGame();
         handleQuestEvent('sell');
       }
@@ -3200,6 +3394,8 @@
           sfx.upgrade();
           showMsg(`Upgraded ${state.upgrades[key].name}!`);
           speak('Yay!');
+          cameraPunch();
+          shake(4, 12);
           unlockCheck();
           renderUpgrades();
           updateHUD();
@@ -3729,6 +3925,10 @@
     showToast(`Quest done! +${q.reward}g`);
     speakGrandma(q.done);
     spawnConfetti(boat.x, boat.y);
+    spawnPopup(boat.x, boat.y, `+${q.reward}g`, '#ffeb3b', true);
+    cameraPunch();
+    shake(8, 20);
+    spawnCoinShower(q.reward);
     questWidget.classList.add('celebrating');
     setTimeout(() => questWidget.classList.remove('celebrating'), 1300);
     state.questIndex++;
@@ -3908,8 +4108,9 @@
     showToast(`🏆 ${a.name}!`);
     speak('Achievement!');
     pulseBookButton();
-    // Confetti from boat for extra celebration
     spawnConfetti(boat.x, boat.y);
+    spawnPopup(boat.x, boat.y, `🏆 ${a.name}`, '#fff176', true);
+    shake(5, 14);
   }
 
   function checkAchievements() {
@@ -4122,13 +4323,21 @@
     }
     updateNPCs();
     updateCamera();
+    updateShake();
+    updatePopups();
+    updateItemPops();
+    updateCoins();
     if (state.miniGameOpen) updateMiniGame();
 
     drawOcean();
+    // World layer — affected by camera shake
+    ctx.save();
+    ctx.translate(cam.shakeX, cam.shakeY);
     drawWakeTrail();
     drawIslands();
     drawWaypoint();
     drawItems();
+    drawItemPops();
     drawFishes();
     drawWildCreatures();
     drawNPCShips();
@@ -4136,7 +4345,11 @@
     drawPets();
     drawSparkles();
     drawTutorial();
+    ctx.restore();
+    // UI / overlay layer — stable on screen
+    drawPopups();
     drawClouds();
+    drawCoins();
     drawCompass();
 
     updateHUD();
