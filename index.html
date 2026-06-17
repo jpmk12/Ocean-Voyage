@@ -284,35 +284,34 @@
     background: radial-gradient(ellipse at center, rgba(0,0,0,0) 50%, rgba(0,0,0,0.45) 100%);
   }
 
-  /* On-screen joystick */
+  /* On-screen joystick — bigger and always visible for small hands */
   #joystick {
     position: fixed;
-    left: 24px;
-    bottom: 24px;
-    width: 140px;
-    height: 140px;
+    left: 28px;
+    bottom: 28px;
+    width: 180px;
+    height: 180px;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.25), rgba(0,40,60,0.4));
-    border: 3px solid rgba(255, 224, 130, 0.85);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.5), inset 0 0 25px rgba(255,255,255,0.15);
+    background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.30), rgba(0,40,60,0.45));
+    border: 4px solid rgba(255, 224, 130, 0.90);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5), inset 0 0 30px rgba(255,255,255,0.18);
     touch-action: none;
     z-index: 4;
-    display: none;
+    display: block;
     user-select: none;
   }
-  #joystick.visible { display: block; }
   #stick {
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 60px;
-    height: 60px;
-    margin-left: -30px;
-    margin-top: -30px;
+    width: 80px;
+    height: 80px;
+    margin-left: -40px;
+    margin-top: -40px;
     border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, #ffe082, #d84315);
-    border: 3px solid #fff;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.45);
+    border: 4px solid #fff;
+    box-shadow: 0 5px 12px rgba(0,0,0,0.5);
     pointer-events: none;
     transition: transform 0.05s linear;
   }
@@ -332,7 +331,119 @@
   @media (max-width: 800px) {
     #hud { font-size: 16px; }
     #hud .panel { padding: 6px 10px; }
+    #joystick { width: 150px; height: 150px; }
+    #stick { width: 66px; height: 66px; margin-left: -33px; margin-top: -33px; }
   }
+
+  /* Island quick-travel bar — tap an island to auto-sail there */
+  #island-bar {
+    position: fixed;
+    right: 16px;
+    bottom: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 4;
+  }
+  .island-btn {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    border: 4px solid #ffe082;
+    background: radial-gradient(circle at 35% 30%, #fff, #b3e5fc);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    cursor: pointer;
+    font-size: 36px;
+    line-height: 68px;
+    text-align: center;
+    padding: 0;
+    transition: transform 0.08s ease;
+    font-family: inherit;
+    user-select: none;
+  }
+  .island-btn:hover:not(:disabled) { transform: scale(1.08); }
+  .island-btn:active:not(:disabled) { transform: scale(0.94); }
+  .island-btn.active {
+    background: radial-gradient(circle at 35% 30%, #ffeb3b, #ffa726);
+    box-shadow: 0 4px 14px rgba(255,143,0,0.7), 0 0 0 4px rgba(255,235,59,0.4);
+  }
+  .island-btn:disabled {
+    background: radial-gradient(circle at 35% 30%, #b0bec5, #607d8b);
+    border-color: #90a4ae;
+    cursor: default;
+    opacity: 0.7;
+  }
+  .island-btn .ib-lock {
+    font-size: 22px;
+    line-height: 68px;
+  }
+
+  /* Mute button (top-right) */
+  #mute-btn {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 3px solid #ffe082;
+    background: rgba(0, 60, 90, 0.75);
+    color: #ffe082;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 5;
+    padding: 0;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    font-family: inherit;
+  }
+  #mute-btn:hover { background: rgba(0, 90, 130, 0.9); }
+
+  /* Cargo full pulse */
+  #hud .panel.warn {
+    animation: pulseWarn 0.6s ease-in-out infinite;
+  }
+  @keyframes pulseWarn {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 87, 34, 0); }
+    50% { box-shadow: 0 0 0 8px rgba(255, 87, 34, 0.55); }
+  }
+
+  /* Start screen pictogram cards */
+  .start-icons {
+    display: flex;
+    gap: 18px;
+    margin: 6px 0 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 560px;
+  }
+  .start-icon {
+    background: rgba(255,255,255,0.18);
+    border: 3px solid #ffe082;
+    border-radius: 18px;
+    padding: 12px 14px 8px;
+    font-size: 44px;
+    text-align: center;
+    min-width: 92px;
+    line-height: 1.1;
+  }
+  .start-icon small {
+    display: block;
+    font-size: 14px;
+    margin-top: 4px;
+    color: #fff8e1;
+  }
+  #reset-btn {
+    margin-top: 14px;
+    background: none;
+    border: 2px solid rgba(255, 224, 130, 0.5);
+    color: rgba(255, 248, 225, 0.7);
+    padding: 6px 14px;
+    font-size: 13px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  #reset-btn:hover { color: #fff; border-color: #ffe082; }
 </style>
 </head>
 <body>
@@ -340,10 +451,14 @@
 <canvas id="game"></canvas>
 <div id="vignette"></div>
 
+<button id="mute-btn" title="Mute / unmute" aria-label="Mute">🔊</button>
+
 <div id="joystick">
   <div id="stick"></div>
   <div id="joystick-hint">drag to sail</div>
 </div>
+
+<div id="island-bar"></div>
 
 <div id="hud">
   <div class="panel">
@@ -384,15 +499,14 @@
 
 <div id="start-screen">
   <h1>Ocean Voyage</h1>
-  <p>Sail your Polynesian canoe across the bright blue ocean. Collect treasures, befriend dolphins and turtles, discover hidden islands, and play games to earn gold!</p>
-  <div class="controls">
-    <b>Controls</b><br/>
-    Arrow keys or WASD to sail &middot; Click/tap the water to sail there<br/>
-    Glide over items to scoop them up<br/>
-    Sail near wild dolphins or turtles &amp; press <b>F</b> (or tap them) to befriend<br/>
-    Return to any island to sell, upgrade, or play a mini-game
+  <div class="start-icons">
+    <div class="start-icon">🕹️<small>sail</small></div>
+    <div class="start-icon">🐚<small>collect</small></div>
+    <div class="start-icon">🏠<small>home</small></div>
+    <div class="start-icon">⭐<small>upgrade</small></div>
   </div>
-  <button id="start-btn">Start Voyage!</button>
+  <button id="start-btn">Play!</button>
+  <button id="reset-btn">start over</button>
 </div>
 
 <script>
@@ -417,6 +531,227 @@
   const TILT = 0.62;
   function projY(wy) { return (wy - cam.y) * TILT; }
   function unprojY(sy) { return sy / TILT + cam.y; }
+
+  // -------- Audio (Web Audio API, all procedural) --------
+  const sfx = {
+    ctx: null, muted: false,
+    musicGain: null, sfxGain: null,
+    musicInterval: null,
+
+    init() {
+      if (this.ctx) {
+        if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+        return;
+      }
+      try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { return; }
+      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.connect(this.ctx.destination);
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.connect(this.ctx.destination);
+      this.updateVolume();
+    },
+    updateVolume() {
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      this.musicGain.gain.setValueAtTime(this.muted ? 0 : 0.07, now);
+      this.sfxGain.gain.setValueAtTime(this.muted ? 0 : 0.55, now);
+    },
+    setMuted(m) {
+      this.muted = m;
+      this.updateVolume();
+      if (m && 'speechSynthesis' in window) speechSynthesis.cancel();
+    },
+    tone(freq, dur, vol = 0.25, type = 'sine', glideTo = null, delay = 0) {
+      if (!this.ctx) return;
+      const t = this.ctx.currentTime + delay;
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t);
+      if (glideTo != null) osc.frequency.exponentialRampToValueAtTime(glideTo, t + dur);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(vol, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.connect(g); g.connect(this.sfxGain);
+      osc.start(t); osc.stop(t + dur + 0.05);
+    },
+    pickup() {
+      this.tone(900, 0.10, 0.35, 'sine', 1320);
+      this.tone(1320, 0.10, 0.25, 'sine', 1760, 0.06);
+    },
+    sell() {
+      this.tone(1175, 0.09, 0.40, 'square');
+      this.tone(1568, 0.22, 0.40, 'square', null, 0.08);
+    },
+    upgrade() {
+      [523, 659, 784, 1047].forEach((n, i) => this.tone(n, 0.18, 0.32, 'triangle', null, i * 0.07));
+    },
+    rare() {
+      [523, 659, 784, 1047, 1319, 1568].forEach((n, i) => this.tone(n, 0.30, 0.38, 'sine', null, i * 0.05));
+    },
+    bonk() { this.tone(180, 0.18, 0.30, 'square', 70); },
+    splash() {
+      if (!this.ctx) return;
+      const t = this.ctx.currentTime;
+      const buf = this.ctx.createBuffer(1, 4800, this.ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf;
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'lowpass'; f.frequency.value = 1100;
+      const g = this.ctx.createGain();
+      g.gain.value = 0.22;
+      src.connect(f); f.connect(g); g.connect(this.sfxGain);
+      src.start(t);
+    },
+    cargoFull() {
+      this.tone(440, 0.10, 0.30, 'square');
+      this.tone(330, 0.18, 0.30, 'square', null, 0.12);
+    },
+    pet() {
+      this.tone(700, 0.10, 0.35, 'sine', 1400);
+      this.tone(1300, 0.10, 0.30, 'sine', 800, 0.06);
+      this.tone(900, 0.08, 0.25, 'sine', 1600, 0.13);
+    },
+    tap() { this.tone(720, 0.05, 0.18, 'sine'); },
+    unlock() {
+      [523, 784, 1047, 1568].forEach((n, i) => this.tone(n, 0.25, 0.40, 'triangle', null, i * 0.10));
+    },
+    kick(when) {
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(95, when);
+      o.frequency.exponentialRampToValueAtTime(40, when + 0.18);
+      g.gain.setValueAtTime(0, when);
+      g.gain.linearRampToValueAtTime(0.22, when + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.001, when + 0.2);
+      o.connect(g); g.connect(this.musicGain);
+      o.start(when); o.stop(when + 0.25);
+    },
+    startMusic() {
+      if (!this.ctx || this.musicInterval) return;
+      // I - vi - IV - V tropical loop (C - Am - F - G)
+      const chords = [
+        { c: [60, 64, 67], b: 36 },
+        { c: [57, 60, 64], b: 33 },
+        { c: [53, 57, 60], b: 29 },
+        { c: [55, 59, 62], b: 31 },
+      ];
+      let idx = 0;
+      const play = () => {
+        if (this.muted || !this.ctx) return;
+        const t = this.ctx.currentTime;
+        const chord = chords[idx % 4];
+        // Ukulele pluck — staggered notes
+        chord.c.forEach((n, i) => {
+          const ot = t + i * 0.04;
+          const f = 440 * Math.pow(2, (n + 12 - 69) / 12);
+          const o = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          o.type = 'triangle';
+          o.frequency.value = f;
+          g.gain.setValueAtTime(0, ot);
+          g.gain.linearRampToValueAtTime(0.13, ot + 0.015);
+          g.gain.exponentialRampToValueAtTime(0.001, ot + 1.4);
+          o.connect(g); g.connect(this.musicGain);
+          o.start(ot); o.stop(ot + 1.45);
+        });
+        // Bass
+        const bf = 440 * Math.pow(2, (chord.b - 69) / 12);
+        const bo = this.ctx.createOscillator();
+        const bg = this.ctx.createGain();
+        bo.type = 'sine';
+        bo.frequency.value = bf;
+        bg.gain.setValueAtTime(0, t);
+        bg.gain.linearRampToValueAtTime(0.18, t + 0.03);
+        bg.gain.exponentialRampToValueAtTime(0.001, t + 1.7);
+        bo.connect(bg); bg.connect(this.musicGain);
+        bo.start(t); bo.stop(t + 1.75);
+        // Soft drum every other bar
+        if (idx % 2 === 0) this.kick(t + 0.0);
+        idx++;
+      };
+      play();
+      this.musicInterval = setInterval(play, 1700);
+    },
+  };
+
+  // Synthesized voice greetings (Web Speech API)
+  let voiceReady = false;
+  if ('speechSynthesis' in window) {
+    speechSynthesis.onvoiceschanged = () => { voiceReady = true; };
+    voiceReady = speechSynthesis.getVoices().length > 0;
+  }
+  let lastSpeakAt = 0;
+  function speak(text) {
+    if (sfx.muted) return;
+    if (!('speechSynthesis' in window)) return;
+    const now = performance.now();
+    if (now - lastSpeakAt < 1500) return; // throttle
+    lastSpeakAt = now;
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1.05;
+      u.pitch = 1.4;
+      u.volume = 0.7;
+      const voices = speechSynthesis.getVoices();
+      const pref = voices.find(v =>
+        /female|samantha|karen|tessa|moira|google us english|en-us/i.test(v.name + ' ' + v.lang)
+      );
+      if (pref) u.voice = pref;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    } catch {}
+  }
+
+  // -------- Save / Load (localStorage) --------
+  const SAVE_KEY = 'oceanVoyageSave_v1';
+  let saveDebounce = null;
+  function saveGame() {
+    clearTimeout(saveDebounce);
+    saveDebounce = setTimeout(() => {
+      try {
+        const data = {
+          gold: state.gold,
+          upgrades: Object.fromEntries(Object.entries(state.upgrades).map(([k, v]) => [k, v.level])),
+          pets: { ...state.pets },
+          unlockedIslands: islands.filter(i => i.unlocked).map(i => i.id),
+          totalCollected: state.totalCollected,
+          tutorialSeen: state.tutorialSeen,
+          muted: sfx.muted,
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      } catch {}
+    }, 200);
+  }
+  function loadGame() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+      const d = JSON.parse(raw);
+      state.gold = d.gold || 0;
+      if (d.upgrades) {
+        for (const [k, lvl] of Object.entries(d.upgrades)) {
+          if (state.upgrades[k]) state.upgrades[k].level = lvl;
+        }
+      }
+      if (d.pets) state.pets = { ...state.pets, ...d.pets };
+      if (d.unlockedIslands) {
+        for (const isl of islands) {
+          if (d.unlockedIslands.includes(isl.id)) isl.unlocked = true;
+        }
+      }
+      state.totalCollected = d.totalCollected || {};
+      state.tutorialSeen = !!d.tutorialSeen;
+      sfx.muted = !!d.muted;
+      sfx.updateVolume();
+      return true;
+    } catch { return false; }
+  }
 
   const rand = (a, b) => a + Math.random() * (b - a);
   const dist2 = (a, b) => { const dx=a.x-b.x, dy=a.y-b.y; return dx*dx+dy*dy; };
@@ -469,10 +804,10 @@
     gold: 0,
     cargo: [],
     upgrades: {
-      cargo:  { level: 0, name: 'Cargo Hold',   baseCost: 25, desc: '+2 cargo slots' },
-      speed:  { level: 0, name: 'Faster Sail',  baseCost: 30, desc: '+25% speed' },
-      hull:   { level: 0, name: 'Stronger Hull',baseCost: 50, desc: 'Bigger, sturdier boat' },
-      range:  { level: 0, name: 'Lucky Net',    baseCost: 40, desc: 'Wider collection range' },
+      cargo:  { level: 0, name: 'Cargo Hold',   baseCost: 10, desc: '+2 cargo slots' },
+      speed:  { level: 0, name: 'Faster Sail',  baseCost: 12, desc: '+25% speed' },
+      hull:   { level: 0, name: 'Stronger Hull',baseCost: 20, desc: 'Bigger, sturdier boat' },
+      range:  { level: 0, name: 'Lucky Net',    baseCost: 18, desc: 'Wider collection range' },
     },
     pets: { dolphin: false, turtle: false },
     items: [],
@@ -487,17 +822,29 @@
     started: false,
     target: null,
     nearWild: null,
-    rareSpawnTimer: 600, // ~10s
+    rareSpawnTimer: 600,
+    // 4-year-old friendly additions
+    totalCollected: {},      // type -> lifetime count
+    tutorialSeen: false,
+    tutorial: { active: false, step: 0 }, // step: 0=collect, 1=home, 2=upgrade
+    autoSailTarget: null,    // island ref when using island-bar
+    cargoFullWarned: false,  // so we only ping once per fill
+    lastBonkAt: 0,
   };
 
-  function cargoMax() { return 3 + state.upgrades.cargo.level * 2 + (state.pets.turtle ? 2 : 0); }
+  // Bigger starting cargo (5) so a kid sees progress faster
+  function cargoMax() { return 5 + state.upgrades.cargo.level * 2 + (state.pets.turtle ? 2 : 0); }
+  // Slower base speed for small hands; speed upgrades and dolphin still scale it
   function speedMax() {
-    let s = 2.6 * Math.pow(1.25, state.upgrades.speed.level);
+    let s = 1.7 * Math.pow(1.22, state.upgrades.speed.level);
     if (state.pets.dolphin) s *= 1.20;
     return s;
   }
   function hullScale() { return 1 + state.upgrades.hull.level * 0.18; }
-  function pickupRange() { return 30 + state.upgrades.range.level * 14; }
+  // Wider default collection range so pickups are forgiving
+  function pickupRange() { return 42 + state.upgrades.range.level * 14; }
+  // Magnet pulls items toward boat from this far out
+  function magnetRange() { return pickupRange() + 90; }
   function upgradeCost(key) {
     const u = state.upgrades[key];
     return Math.round(u.baseCost * Math.pow(1.65, u.level));
@@ -774,12 +1121,14 @@
 
   function befriend(c) {
     if (state.pets[c.kind]) {
+      sfx.tap();
       showMsg(`You already have a ${c.kind} friend! Find a new creature.`);
       return;
     }
     state.pets[c.kind] = true;
-    // Particles
-    for (let i = 0; i < 20; i++) {
+    sfx.pet();
+    speak(c.kind === 'dolphin' ? 'Hi dolphin!' : 'Hi turtle!');
+    for (let i = 0; i < 24; i++) {
       state.sparkles.push({
         x: c.x, y: c.y,
         vx: rand(-2, 2), vy: rand(-3, -0.5),
@@ -791,7 +1140,8 @@
     state.nearWild = null;
     document.getElementById('befriend-prompt').style.display = 'none';
     showToast(c.kind === 'dolphin' ? '🐬 Dolphin friend!' : '🐢 Turtle friend!');
-    setTimeout(() => spawnWildCreature(c.kind), 25000); // respawn a new wild one
+    saveGame();
+    setTimeout(() => spawnWildCreature(c.kind), 25000);
   }
 
   // -------- Camera --------
@@ -807,12 +1157,16 @@
     if (keys['arrowright'] || keys['d']) ax += 1;
 
     let usingKeys = (ax !== 0 || ay !== 0);
+    const joyActive = joystick.active && (joystick.dx !== 0 || joystick.dy !== 0);
+    // Any manual input cancels auto-sail
+    if (usingKeys || joyActive || state.target) state.autoSailTarget = null;
+
     if (usingKeys) {
       state.target = null;
       const m = Math.hypot(ax, ay) || 1;
       boat.vx += (ax / m) * accel;
       boat.vy += (ay / m) * accel;
-    } else if (joystick.active && (joystick.dx !== 0 || joystick.dy !== 0)) {
+    } else if (joyActive) {
       state.target = null;
       const m = Math.hypot(joystick.dx, joystick.dy) || 1;
       const mag = Math.min(1, m);
@@ -826,6 +1180,29 @@
       else {
         boat.vx += (dx / d) * accel;
         boat.vy += (dy / d) * accel;
+      }
+    } else if (state.autoSailTarget) {
+      // Auto-sail to an island (from quick-travel buttons)
+      const isl = state.autoSailTarget;
+      const dx = isl.x - boat.x, dy = isl.y - boat.y;
+      const d = Math.hypot(dx, dy);
+      if (d < isl.r + 30) {
+        state.autoSailTarget = null;
+        updateIslandBar();
+      } else {
+        boat.vx += (dx / d) * accel;
+        boat.vy += (dy / d) * accel;
+        // Steer around other islands in the way
+        for (const o of islands) {
+          if (o === isl || !o.unlocked) continue;
+          const adx = boat.x - o.x, ady = boat.y - o.y;
+          const ad = Math.hypot(adx, ady);
+          if (ad < o.r + 80) {
+            const f = (o.r + 80 - ad) * 0.012;
+            boat.vx += (adx / ad) * f;
+            boat.vy += (ady / ad) * f;
+          }
+        }
       }
     } else {
       boat.vx *= 0.94; boat.vy *= 0.94;
@@ -847,7 +1224,7 @@
     if (boat.x > WORLD_W - m) { boat.x = WORLD_W - m; boat.vx = -Math.abs(boat.vx) * 0.4; }
     if (boat.y > WORLD_H - m) { boat.y = WORLD_H - m; boat.vy = -Math.abs(boat.vy) * 0.4; }
 
-    // Push away from each island's land
+    // Push away from each island's land — gentle bonk for kids
     for (const isl of islands) {
       const dx = boat.x - isl.x, dy = boat.y - isl.y;
       const d = Math.hypot(dx, dy);
@@ -856,7 +1233,13 @@
         const nx = dx / (d || 1), ny = dy / (d || 1);
         boat.x = isl.x + nx * landR;
         boat.y = isl.y + ny * landR;
+        const sp = Math.hypot(boat.vx, boat.vy);
         boat.vx *= -0.3; boat.vy *= -0.3;
+        const now = performance.now();
+        if (sp > 0.6 && now - state.lastBonkAt > 350) {
+          state.lastBonkAt = now;
+          sfx.bonk();
+        }
       }
     }
 
@@ -895,16 +1278,33 @@
 
   function updateItems() {
     for (const it of state.items) it.bob += 0.04;
-    const r2 = pickupRange() * pickupRange();
+    const pR = pickupRange();
+    const pR2 = pR * pR;
+    const mR = magnetRange();
+    const mR2 = mR * mR;
+    const hasRoom = state.cargo.length < cargoMax();
+
     for (let i = state.items.length - 1; i >= 0; i--) {
       const it = state.items[i];
-      if (dist2(boat, it) < r2) {
-        if (state.cargo.length < cargoMax()) {
+      const d2 = dist2(boat, it);
+
+      // Magnet pull (only when we have room) — items fly to the boat
+      if (hasRoom && d2 < mR2 && d2 > pR2) {
+        const d = Math.sqrt(d2);
+        const dx = boat.x - it.x, dy = boat.y - it.y;
+        // Stronger pull the closer you are
+        const strength = Math.pow(1 - (d - pR) / (mR - pR), 1.5) * 5.5;
+        it.x += (dx / d) * strength;
+        it.y += (dy / d) * strength;
+      }
+
+      if (d2 < pR2) {
+        if (hasRoom) {
           state.cargo.push(it.type);
+          state.totalCollected[it.type] = (state.totalCollected[it.type] || 0) + 1;
           const t = itemTypes[it.type];
-          // Particles
           const col = t.rare ? '#fff176' : '#ffe082';
-          const count = t.rare ? 22 : 8;
+          const count = t.rare ? 26 : 10;
           for (let s = 0; s < count; s++) {
             state.sparkles.push({
               x: it.x, y: it.y,
@@ -914,13 +1314,28 @@
           }
           state.items.splice(i, 1);
           if (t.rare) {
+            sfx.rare();
             showToast(`★ ${t.name}! +${t.value}g ★`);
+            speak('Treasure!');
           } else {
-            showMsg(`+1 ${it.type}! (worth ${t.value} gold)`);
+            sfx.pickup();
+            showMsg(`+${t.value} gold!`);
           }
-          setTimeout(() => { if (state.items.length < 40) spawnItem(); }, 800);
+          state.cargoFullWarned = false;
+          // Advance tutorial step 0 -> 1
+          if (state.tutorial.active && state.tutorial.step === 0) {
+            state.tutorial.step = 1;
+            speak('Now sail home!');
+          }
+          saveGame();
+          setTimeout(() => { if (state.items.length < 40) spawnItem(); }, 700);
         } else {
-          showMsg('Cargo full! Sail home to sell.');
+          if (!state.cargoFullWarned) {
+            state.cargoFullWarned = true;
+            sfx.cargoFull();
+            showMsg('Cargo full! Sail home!');
+            speak('Sail home!');
+          }
         }
       }
     }
@@ -1058,6 +1473,7 @@
       if (d2 < 220 * 220 && !ship.greeted) {
         ship.greeted = true;
         ship.waveTimer = 140;
+        speak(ship.greeting.replace(/[!ā]/g, m => m === 'ā' ? 'ah' : ''));
       } else if (d2 > 380 * 380) {
         ship.greeted = false;
       }
@@ -1074,7 +1490,11 @@
         }
         if (ok) {
           isl.unlocked = true;
-          showToast(`New island discovered: ${isl.name}!`);
+          sfx.unlock();
+          showToast(`New island: ${isl.name}!`);
+          speak(`${isl.name} is open!`);
+          updateIslandBar();
+          saveGame();
         }
       }
     }
@@ -1096,7 +1516,16 @@
         for (const c of state.cargo) earned += itemTypes[c].value;
         state.gold += earned;
         state.cargo = [];
+        state.cargoFullWarned = false;
+        sfx.sell();
         showMsg(`Sold cargo for ${earned} gold!`);
+        speak(`${earned} gold!`);
+        saveGame();
+      }
+      // Advance tutorial step 1 -> 2
+      if (state.tutorial.active && state.tutorial.step === 1) {
+        state.tutorial.step = 2;
+        setTimeout(() => speak('Buy something new!'), 900);
       }
       openShop(near);
     } else if (!near) {
@@ -2110,6 +2539,93 @@
     ctx.globalAlpha = 1;
   }
 
+  // Pulsing ring on the next thing the player should aim for
+  function drawWaypoint() {
+    if (!state.started || state.shopOpen || state.miniGameOpen) return;
+    let target = null;
+    // If cargo is mostly full, point home; else point at nearest item
+    if (state.cargo.length >= cargoMax() * 0.8 && state.cargo.length > 0) {
+      let bestD = Infinity;
+      for (const isl of islands) {
+        if (!isl.unlocked) continue;
+        const d = Math.hypot(boat.x - isl.x, boat.y - isl.y);
+        if (d < bestD) { bestD = d; target = isl; }
+      }
+    } else {
+      let bestD = Infinity;
+      for (const it of state.items) {
+        if (itemTypes[it.type].rare) continue;
+        const d = dist2(boat, it);
+        if (d < bestD) { bestD = d; target = it; }
+      }
+    }
+    if (!target) return;
+    const sx = target.x - cam.x, sy = projY(target.y);
+    const t = performance.now() / 280;
+    const pulse = (Math.sin(t) + 1) / 2;
+    ctx.save();
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 3; i++) {
+      const off = (t * 0.5 + i / 3) % 1;
+      const r = 24 + off * 28;
+      ctx.strokeStyle = `rgba(255, 235, 130, ${0.65 * (1 - off)})`;
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, r, r * 0.65, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Tutorial: big bouncing arrow pointing from the boat toward the next goal
+  function drawTutorial() {
+    if (!state.tutorial.active) return;
+    let target = null;
+    let phrase = '';
+    if (state.tutorial.step === 0) {
+      let bestD = Infinity;
+      for (const it of state.items) {
+        if (itemTypes[it.type].rare) continue;
+        const d = dist2(boat, it);
+        if (d < bestD) { bestD = d; target = it; }
+      }
+      phrase = 'collect!';
+    } else if (state.tutorial.step === 1) {
+      target = islandById('home');
+      phrase = 'home!';
+    }
+    if (!target) return;
+    const sx = boat.x - cam.x, sy = projY(boat.y);
+    const dx = target.x - boat.x, dy = target.y - boat.y;
+    const ang = Math.atan2(dy, dx);
+    const bob = (Math.sin(performance.now() / 250) + 1) * 6;
+    const r = 90 + bob;
+    const ax = sx + Math.cos(ang) * r;
+    const ay = sy + Math.sin(ang) * r * TILT;
+    ctx.save();
+    ctx.translate(ax, ay);
+    ctx.rotate(ang);
+    ctx.fillStyle = '#ffeb3b';
+    ctx.strokeStyle = '#e65100';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(28, 0);
+    ctx.lineTo(-8, -20);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(-8, 20);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = '#3e2723';
+    ctx.lineWidth = 3;
+    ctx.font = 'bold 18px Trebuchet MS';
+    ctx.textAlign = 'center';
+    const txt = phrase;
+    ctx.strokeText(txt, sx, sy - 70);
+    ctx.fillText(txt, sx, sy - 70);
+  }
+
   function drawCompass() {
     // Point toward nearest unlocked island we're not already at
     let target = null, bestD = Infinity;
@@ -2164,7 +2680,11 @@
     goldEl.textContent = state.gold;
     cargoEl.textContent = state.cargo.length;
     cargoMaxEl.textContent = cargoMax();
-    cargoFill.style.width = ((state.cargo.length / cargoMax()) * 100) + '%';
+    const frac = state.cargo.length / cargoMax();
+    cargoFill.style.width = (frac * 100) + '%';
+    const panel = goldEl.closest('.panel');
+    if (state.cargo.length >= cargoMax()) panel.classList.add('warn');
+    else panel.classList.remove('warn');
     let html = '';
     if (state.pets.dolphin) html += '<span class="pet-badge">🐬 +speed</span>';
     if (state.pets.turtle)  html += '<span class="pet-badge">🐢 +cargo</span>';
@@ -2237,10 +2757,22 @@
         if (state.gold >= cost) {
           state.gold -= cost;
           state.upgrades[key].level++;
+          sfx.upgrade();
           showMsg(`Upgraded ${state.upgrades[key].name}!`);
+          speak('Yay!');
           unlockCheck();
           renderUpgrades();
           updateHUD();
+          updateIslandBar();
+          saveGame();
+          // Finish tutorial step 2 -> done
+          if (state.tutorial.active && state.tutorial.step === 2) {
+            state.tutorial.active = false;
+            state.tutorialSeen = true;
+            saveGame();
+          }
+        } else {
+          sfx.tap();
         }
       });
     });
@@ -2661,11 +3193,69 @@
     toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
   }
 
+  // -------- Island quick-travel bar --------
+  const islandBarEl = document.getElementById('island-bar');
+  // Friendly icons per island id
+  const islandIcons = { home: '🏠', reef: '🐠', volcano: '🌋', pearl: '💎' };
+  function updateIslandBar() {
+    islandBarEl.innerHTML = '';
+    for (const isl of islands) {
+      const btn = document.createElement('button');
+      btn.className = 'island-btn';
+      if (state.autoSailTarget === isl) btn.classList.add('active');
+      if (!isl.unlocked) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="ib-lock">🔒</span>';
+      } else {
+        btn.textContent = islandIcons[isl.id] || '🏝️';
+      }
+      btn.title = isl.unlocked ? isl.name : 'Locked';
+      btn.addEventListener('click', () => {
+        if (!isl.unlocked) { sfx.tap(); return; }
+        sfx.tap();
+        state.autoSailTarget = isl;
+        state.target = null;
+        showMsg(`Sailing to ${isl.name}…`);
+        updateIslandBar();
+      });
+      islandBarEl.appendChild(btn);
+    }
+  }
+
+  // -------- Mute button --------
+  const muteBtn = document.getElementById('mute-btn');
+  function refreshMuteIcon() { muteBtn.textContent = sfx.muted ? '🔇' : '🔊'; }
+  muteBtn.addEventListener('click', () => {
+    sfx.setMuted(!sfx.muted);
+    refreshMuteIcon();
+    saveGame();
+  });
+
   // -------- Start --------
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    if (confirm('Start over? This will erase your treasures.')) {
+      localStorage.removeItem(SAVE_KEY);
+      location.reload();
+    }
+  });
+
   document.getElementById('start-btn').addEventListener('click', () => {
+    // Init audio on user gesture (browser policy)
+    sfx.init();
+    sfx.startMusic();
+    sfx.tap();
+    // Load any saved progress
+    loadGame();
+    refreshMuteIcon();
+    updateIslandBar();
+    // Tutorial only for brand-new players
+    if (!state.tutorialSeen) {
+      state.tutorial = { active: true, step: 0 };
+      setTimeout(() => speak('Find a shell!'), 500);
+    }
     document.getElementById('start-screen').style.display = 'none';
     state.started = true;
-    showMsg('Sail out and gather treasures!');
+    showMsg(state.gold > 0 ? 'Welcome back, sailor!' : 'Sail out and gather treasures!');
   });
 
   // -------- Main loop --------
@@ -2687,6 +3277,7 @@
     drawOcean();
     drawWakeTrail();
     drawIslands();
+    drawWaypoint();
     drawItems();
     drawFishes();
     drawWildCreatures();
@@ -2694,6 +3285,7 @@
     drawBoat();
     drawPets();
     drawSparkles();
+    drawTutorial();
     drawClouds();
     drawCompass();
 
