@@ -378,11 +378,10 @@
     line-height: 68px;
   }
 
-  /* Mute button (top-right) */
-  #mute-btn {
+  /* Mute button and book button (top-right) */
+  #mute-btn, #book-btn {
     position: fixed;
     top: 14px;
-    right: 14px;
     width: 52px;
     height: 52px;
     border-radius: 50%;
@@ -396,7 +395,132 @@
     box-shadow: 0 4px 10px rgba(0,0,0,0.4);
     font-family: inherit;
   }
-  #mute-btn:hover { background: rgba(0, 90, 130, 0.9); }
+  #mute-btn { right: 14px; }
+  #book-btn { right: 76px; }
+  #mute-btn:hover, #book-btn:hover { background: rgba(0, 90, 130, 0.9); }
+  @keyframes bookPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+    50% { transform: scale(1.18); box-shadow: 0 4px 10px rgba(0,0,0,0.4), 0 0 0 10px rgba(255,235,59,0.55); }
+  }
+  #book-btn.pulse { animation: bookPulse 0.6s ease-in-out 3; }
+
+  /* Treasure Book overlay */
+  #book-overlay {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #8d6e63, #5d4037);
+    border: 4px solid #ffe082;
+    border-radius: 22px;
+    padding: 22px;
+    width: 92%;
+    max-width: 640px;
+    max-height: 88vh;
+    display: none;
+    flex-direction: column;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+    z-index: 13;
+  }
+  #book-overlay.visible { display: flex; }
+  #book-overlay h2 {
+    text-align: center;
+    color: #ffe082;
+    text-shadow: 2px 2px 0 #3e2723;
+    margin-bottom: 12px;
+  }
+  .book-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .book-tab {
+    background: rgba(0,0,0,0.35);
+    border: 2px solid rgba(255,224,130,0.45);
+    color: #fff8e1;
+    border-radius: 10px;
+    padding: 7px 12px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .book-tab:hover { background: rgba(0,0,0,0.5); }
+  .book-tab.active {
+    background: linear-gradient(180deg, #ffd54f, #ff8a00);
+    color: #3e2723;
+    border-color: #fff8e1;
+    box-shadow: 0 2px 0 #b00, 0 0 0 2px #ffe082 inset;
+  }
+  #book-content {
+    flex: 1;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.18);
+    border-radius: 12px;
+    padding: 12px;
+    border: 2px solid #ffe082;
+  }
+  .book-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 10px;
+  }
+  .book-cell {
+    background: rgba(255,255,255,0.12);
+    border: 2px solid #ffe082;
+    border-radius: 12px;
+    padding: 10px 6px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.08s ease;
+    color: #fff;
+    font-family: inherit;
+  }
+  .book-cell:hover { transform: scale(1.06); background: rgba(255,255,255,0.20); }
+  .book-cell.locked {
+    opacity: 0.45;
+    filter: grayscale(0.85);
+    background: rgba(0,0,0,0.25);
+  }
+  .book-cell .b-icon {
+    font-size: 38px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .book-cell .b-name {
+    font-size: 13px;
+    font-weight: bold;
+    line-height: 1.15;
+  }
+  .book-cell .b-count {
+    font-size: 11px;
+    opacity: 0.85;
+    margin-top: 2px;
+  }
+  .book-cell .b-locked {
+    font-size: 11px;
+    opacity: 0.85;
+    margin-top: 2px;
+  }
+  .book-progress-bar {
+    height: 8px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 6px;
+    border: 1px solid #ffe082;
+  }
+  .book-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ffeb3b, #ff8a00);
+  }
+  #book-stats {
+    text-align: center;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #fff8e1;
+  }
 
   /* Cargo full pulse */
   #hud .panel.warn {
@@ -534,6 +658,22 @@
 <div id="vignette"></div>
 
 <button id="mute-btn" title="Mute / unmute" aria-label="Mute">🔊</button>
+<button id="book-btn" title="Treasure Book" aria-label="Treasure Book">📔</button>
+
+<div id="book-overlay">
+  <h2>📔 Treasure Book</h2>
+  <div id="book-stats"></div>
+  <div class="book-tabs">
+    <button class="book-tab active" data-tab="items">🐚 Items</button>
+    <button class="book-tab" data-tab="friends">🐬 Friends</button>
+    <button class="book-tab" data-tab="islands">🗺️ Islands</button>
+    <button class="book-tab" data-tab="badges">🏆 Badges</button>
+  </div>
+  <div id="book-content"></div>
+  <div class="shop-actions">
+    <button class="shop-action sail" id="book-close">Done</button>
+  </div>
+</div>
 
 <div id="quest-widget" title="Tap to hear Grandma again">
   <div id="quest-portrait">👵</div>
@@ -815,6 +955,9 @@
           muted: sfx.muted,
           questIndex: state.questIndex,
           questProgress: state.questProgress,
+          unlockedAchievements: state.unlockedAchievements,
+          islandsVisited: state.islandsVisited,
+          minigamesPlayed: state.minigamesPlayed,
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
       } catch {}
@@ -843,6 +986,10 @@
       sfx.updateVolume();
       if (typeof d.questIndex === 'number') state.questIndex = d.questIndex;
       if (typeof d.questProgress === 'number') state.questProgress = d.questProgress;
+      if (d.unlockedAchievements) state.unlockedAchievements = d.unlockedAchievements;
+      if (d.islandsVisited) state.islandsVisited = d.islandsVisited;
+      state.islandsVisited.home = true;
+      if (d.minigamesPlayed) state.minigamesPlayed = d.minigamesPlayed;
       return true;
     } catch { return false; }
   }
@@ -927,8 +1074,80 @@
     // Quest system
     questIndex: 0,
     questProgress: 0,
-    questCompletedCelebrate: 0, // countdown frames for big celebration
+    questCompletedCelebrate: 0,
+    // Treasure book — collection / achievements
+    unlockedAchievements: {},   // id -> true
+    islandsVisited: { home: true },
+    minigamesPlayed: {},
+    bookOpen: false,
   };
+
+  // -------- Achievements (badges in the Treasure Book) --------
+  const ACHIEVEMENTS = [
+    // First steps
+    { id: 'first_shell',    icon: '🐚', name: 'First Shell',     desc: 'Find your first shell.',
+      check: () => (state.totalCollected.shell || 0) >= 1 },
+    { id: 'first_starfish', icon: '⭐', name: 'Starfish Found',   desc: 'Find your first starfish.',
+      check: () => (state.totalCollected.starfish || 0) >= 1 },
+    { id: 'first_coral',    icon: '🪸', name: 'Coral Found',      desc: 'Find your first coral.',
+      check: () => (state.totalCollected.coral || 0) >= 1 },
+    { id: 'first_pearl',    icon: '🦪', name: 'First Pearl',      desc: 'Find your first pearl.',
+      check: () => (state.totalCollected.pearl || 0) >= 1 },
+    { id: 'first_treasure', icon: '✨', name: 'Treasure Hunter',  desc: 'Find a rare treasure.',
+      check: () => (state.totalCollected.golden_conch || 0) + (state.totalCollected.treasure_chest || 0) >= 1 },
+    // Milestones
+    { id: 'shell_10',   icon: '🐚', name: 'Shell Collector', desc: 'Collect ten shells.',
+      check: () => (state.totalCollected.shell || 0) >= 10 },
+    { id: 'shell_50',   icon: '🐚', name: 'Shell Master',    desc: 'Collect fifty shells.',
+      check: () => (state.totalCollected.shell || 0) >= 50 },
+    { id: 'starfish_10',icon: '🌟', name: 'Starlight',       desc: 'Collect ten starfish.',
+      check: () => (state.totalCollected.starfish || 0) >= 10 },
+    { id: 'pearl_10',   icon: '🦪', name: 'Pearl Hunter',    desc: 'Collect ten pearls.',
+      check: () => (state.totalCollected.pearl || 0) >= 10 },
+    { id: 'pearl_50',   icon: '👑', name: 'Pearl Royalty',   desc: 'Collect fifty pearls.',
+      check: () => (state.totalCollected.pearl || 0) >= 50 },
+    { id: 'coral_10',   icon: '🪸', name: 'Coral Keeper',    desc: 'Collect ten corals.',
+      check: () => (state.totalCollected.coral || 0) >= 10 },
+    { id: 'treasure_5', icon: '💎', name: 'Treasure Master', desc: 'Find five rare treasures.',
+      check: () => (state.totalCollected.golden_conch || 0) + (state.totalCollected.treasure_chest || 0) >= 5 },
+    // Friends
+    { id: 'dolphin', icon: '🐬', name: 'Dolphin Friend', desc: 'Befriend a dolphin.',
+      check: () => state.pets.dolphin },
+    { id: 'turtle',  icon: '🐢', name: 'Turtle Friend',  desc: 'Befriend a sea turtle.',
+      check: () => state.pets.turtle },
+    { id: 'both_pets', icon: '❤️', name: 'Best Friends',  desc: 'Befriend a dolphin AND a turtle.',
+      check: () => state.pets.dolphin && state.pets.turtle },
+    // Exploration
+    { id: 'visit_reef',    icon: '🐠', name: 'Reef Explorer',    desc: 'Visit Reef Atoll.',
+      check: () => state.islandsVisited.reef },
+    { id: 'visit_volcano', icon: '🌋', name: 'Volcano Climber',  desc: 'Visit Volcano Island.',
+      check: () => state.islandsVisited.volcano },
+    { id: 'visit_pearl',   icon: '💎', name: 'Pearl Discoverer', desc: 'Visit Pearl Atoll.',
+      check: () => state.islandsVisited.pearl },
+    { id: 'all_islands',   icon: '🗺️', name: 'World Traveler',  desc: 'Visit every island.',
+      check: () => state.islandsVisited.home && state.islandsVisited.reef && state.islandsVisited.volcano && state.islandsVisited.pearl },
+    // Gold
+    { id: 'gold_100',  icon: '💰', name: 'Gold Bag',   desc: 'Have 100 gold at once.',
+      check: () => state.gold >= 100 },
+    { id: 'gold_500',  icon: '💰', name: 'Gold Chest', desc: 'Have 500 gold at once.',
+      check: () => state.gold >= 500 },
+    { id: 'gold_1000', icon: '👑', name: 'Gold Crown', desc: 'Have 1000 gold at once.',
+      check: () => state.gold >= 1000 },
+    // Upgrades
+    { id: 'first_upgrade', icon: '⭐', name: 'First Upgrade', desc: 'Buy any upgrade.',
+      check: () => Object.values(state.upgrades).some(u => u.level > 0) },
+    { id: 'speed_3', icon: '🚤', name: 'Speedy',   desc: 'Speed Lv 3.',
+      check: () => state.upgrades.speed.level >= 3 },
+    { id: 'cargo_3', icon: '📦', name: 'Big Boat', desc: 'Cargo Lv 3.',
+      check: () => state.upgrades.cargo.level >= 3 },
+    { id: 'maxed_one', icon: '⚡', name: 'Top Sailor', desc: 'Reach Lv 5 on any upgrade.',
+      check: () => Object.values(state.upgrades).some(u => u.level >= 5) },
+    // Mini-games
+    { id: 'play_coconut', icon: '🥥', name: 'Coconut Champ', desc: 'Play Coconut Catch.',
+      check: () => state.minigamesPlayed.coconut },
+    { id: 'play_fishing', icon: '🎣', name: 'Little Fisher',  desc: 'Play Fishing.',
+      check: () => state.minigamesPlayed.fishing },
+  ];
 
   // -------- Quests (Grandma Moana's story chain) --------
   const QUESTS = [
@@ -1198,7 +1417,7 @@
   window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
   canvas.addEventListener('pointerdown', (e) => {
-    if (!state.started || state.shopOpen || state.miniGameOpen) return;
+    if (!state.started || state.shopOpen || state.miniGameOpen || state.bookOpen) return;
     const rect = canvas.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
@@ -1308,6 +1527,7 @@
     document.getElementById('befriend-prompt').style.display = 'none';
     showToast(c.kind === 'dolphin' ? '🐬 Dolphin friend!' : '🐢 Turtle friend!');
     handleQuestEvent('befriend', c.kind);
+    checkAchievements();
     saveGame();
     setTimeout(() => spawnWildCreature(c.kind), 25000);
   }
@@ -1491,6 +1711,7 @@
             showMsg(`+${t.value} gold!`);
           }
           handleQuestEvent('collect', it.type);
+          checkAchievements();
           state.cargoFullWarned = false;
           // Advance tutorial step 0 -> 1
           if (state.tutorial.active && state.tutorial.step === 0) {
@@ -1680,6 +1901,7 @@
     const wasNear = state.nearIsland;
     if (near && near !== wasNear) {
       state.nearIsland = near;
+      state.islandsVisited[near.id] = true;
       // Sell cargo
       if (state.cargo.length > 0) {
         let earned = 0;
@@ -1694,6 +1916,7 @@
         handleQuestEvent('sell');
       }
       handleQuestEvent('visit', near.id);
+      checkAchievements();
       // Advance tutorial step 1 -> 2
       if (state.tutorial.active && state.tutorial.step === 1) {
         state.tutorial.step = 2;
@@ -2993,6 +3216,7 @@
           } else {
             handleQuestEvent('upgrade', key);
           }
+          checkAchievements();
         } else {
           sfx.tap();
         }
@@ -3018,7 +3242,10 @@
     mgOverlay.style.display = 'block';
     if (kind === 'coconut') startCoconutGame();
     else if (kind === 'fishing') startFishingGame();
+    state.minigamesPlayed[kind] = true;
     handleQuestEvent('minigame', kind);
+    checkAchievements();
+    saveGame();
   }
   function closeMiniGame() {
     state.miniGameOpen = false;
@@ -3508,6 +3735,7 @@
     state.questProgress = 0;
     saveGame();
     updateQuestWidget();
+    checkAchievements();
     // After the celebration, announce next quest
     setTimeout(() => {
       const next = currentQuest();
@@ -3648,6 +3876,166 @@
     ctx.restore();
   }
 
+  // -------- Treasure Book + Achievements --------
+  const ITEM_META = {
+    shell:          { icon: '🐚', name: 'Shell' },
+    starfish:       { icon: '🌟', name: 'Starfish' },
+    coral:          { icon: '🪸', name: 'Coral' },
+    pearl:          { icon: '🦪', name: 'Pearl' },
+    golden_conch:   { icon: '🐚', name: 'Golden Conch' },
+    treasure_chest: { icon: '💎', name: 'Treasure' },
+  };
+  const FRIEND_META = {
+    dolphin: { icon: '🐬', name: 'Dolphin', desc: 'Plus speed!' },
+    turtle:  { icon: '🐢', name: 'Sea Turtle', desc: 'Plus cargo!' },
+  };
+  const ISLAND_ICONS = { home: '🏠', reef: '🐠', volcano: '🌋', pearl: '💎' };
+
+  const bookBtn = document.getElementById('book-btn');
+  const bookOverlay = document.getElementById('book-overlay');
+  const bookContent = document.getElementById('book-content');
+  const bookStats = document.getElementById('book-stats');
+  let bookTab = 'items';
+
+  function pulseBookButton() {
+    bookBtn.classList.remove('pulse');
+    void bookBtn.offsetWidth;
+    bookBtn.classList.add('pulse');
+  }
+
+  function showAchievement(a) {
+    sfx.upgrade();
+    showToast(`🏆 ${a.name}!`);
+    speak('Achievement!');
+    pulseBookButton();
+    // Confetti from boat for extra celebration
+    spawnConfetti(boat.x, boat.y);
+  }
+
+  function checkAchievements() {
+    let anyNew = false;
+    for (const a of ACHIEVEMENTS) {
+      if (state.unlockedAchievements[a.id]) continue;
+      try {
+        if (a.check()) {
+          state.unlockedAchievements[a.id] = true;
+          showAchievement(a);
+          anyNew = true;
+        }
+      } catch (e) {}
+    }
+    if (anyNew) saveGame();
+  }
+  // Silent grant (used at load time — don't spam toasts/sounds)
+  function syncAchievementsSilent() {
+    for (const a of ACHIEVEMENTS) {
+      if (state.unlockedAchievements[a.id]) continue;
+      try { if (a.check()) state.unlockedAchievements[a.id] = true; } catch (e) {}
+    }
+  }
+
+  function renderBook() {
+    bookContent.innerHTML = '';
+    const grid = document.createElement('div');
+    grid.className = 'book-grid';
+
+    const speakCell = (name) => { sfx.tap(); speak(name); };
+
+    if (bookTab === 'items') {
+      for (const [type, meta] of Object.entries(ITEM_META)) {
+        const count = state.totalCollected[type] || 0;
+        const locked = count === 0;
+        const cell = document.createElement('div');
+        cell.className = 'book-cell' + (locked ? ' locked' : '');
+        cell.innerHTML = `
+          <div class="b-icon">${locked ? '❓' : meta.icon}</div>
+          <div class="b-name">${locked ? '???' : meta.name}</div>
+          <div class="b-count">${locked ? 'find one!' : 'x' + count}</div>
+        `;
+        cell.addEventListener('click', () => speakCell(locked ? 'A mystery!' : meta.name));
+        grid.appendChild(cell);
+      }
+    } else if (bookTab === 'friends') {
+      for (const [id, meta] of Object.entries(FRIEND_META)) {
+        const owned = !!state.pets[id];
+        const cell = document.createElement('div');
+        cell.className = 'book-cell' + (owned ? '' : ' locked');
+        cell.innerHTML = `
+          <div class="b-icon">${owned ? meta.icon : '❓'}</div>
+          <div class="b-name">${owned ? meta.name : '???'}</div>
+          <div class="b-count">${owned ? meta.desc : 'find a friend!'}</div>
+        `;
+        cell.addEventListener('click', () => speakCell(owned ? meta.name : 'A mystery!'));
+        grid.appendChild(cell);
+      }
+    } else if (bookTab === 'islands') {
+      for (const isl of islands) {
+        const visited = !!state.islandsVisited[isl.id];
+        const cell = document.createElement('div');
+        cell.className = 'book-cell' + (visited ? '' : ' locked');
+        cell.innerHTML = `
+          <div class="b-icon">${visited ? (ISLAND_ICONS[isl.id] || '🏝️') : '❓'}</div>
+          <div class="b-name">${visited ? isl.name : '???'}</div>
+          <div class="b-count">${visited ? '✓ visited' : (isl.unlocked ? 'sail there!' : 'locked')}</div>
+        `;
+        cell.addEventListener('click', () => speakCell(visited ? isl.name : 'A mystery island'));
+        grid.appendChild(cell);
+      }
+    } else if (bookTab === 'badges') {
+      for (const a of ACHIEVEMENTS) {
+        const unlocked = !!state.unlockedAchievements[a.id];
+        const cell = document.createElement('div');
+        cell.className = 'book-cell' + (unlocked ? '' : ' locked');
+        cell.innerHTML = `
+          <div class="b-icon">${unlocked ? a.icon : '❓'}</div>
+          <div class="b-name">${unlocked ? a.name : '???'}</div>
+          <div class="b-locked">${unlocked ? a.desc : 'keep playing!'}</div>
+        `;
+        cell.addEventListener('click', () => speakCell(unlocked ? a.name : 'A mystery badge'));
+        grid.appendChild(cell);
+      }
+    }
+    bookContent.appendChild(grid);
+
+    // Stats summary at the top of the book
+    const unlockedBadges = Object.keys(state.unlockedAchievements).length;
+    const totalBadges = ACHIEVEMENTS.length;
+    const itemsFound = Object.keys(ITEM_META).filter(t => (state.totalCollected[t] || 0) > 0).length;
+    const totalItems = Object.keys(ITEM_META).length;
+    const islandsFound = islands.filter(i => state.islandsVisited[i.id]).length;
+    const friends = (state.pets.dolphin ? 1 : 0) + (state.pets.turtle ? 1 : 0);
+    bookStats.innerHTML = `
+      🐚 ${itemsFound}/${totalItems} &nbsp;|&nbsp; 🐬 ${friends}/2 &nbsp;|&nbsp;
+      🗺️ ${islandsFound}/${islands.length} &nbsp;|&nbsp; 🏆 ${unlockedBadges}/${totalBadges}
+    `;
+  }
+
+  function openBook() {
+    sfx.tap();
+    state.bookOpen = true;
+    bookTab = 'items';
+    document.querySelectorAll('.book-tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === 'items');
+    });
+    renderBook();
+    bookOverlay.classList.add('visible');
+  }
+  function closeBook() {
+    sfx.tap();
+    state.bookOpen = false;
+    bookOverlay.classList.remove('visible');
+  }
+  bookBtn.addEventListener('click', openBook);
+  document.getElementById('book-close').addEventListener('click', closeBook);
+  document.querySelectorAll('.book-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sfx.tap();
+      bookTab = btn.dataset.tab;
+      document.querySelectorAll('.book-tab').forEach(b => b.classList.toggle('active', b === btn));
+      renderBook();
+    });
+  });
+
   // -------- Island quick-travel bar --------
   const islandBarEl = document.getElementById('island-bar');
   // Friendly icons per island id
@@ -3701,6 +4089,8 @@
     sfx.tap();
     // Load any saved progress
     loadGame();
+    // Quietly catch up any achievements that should have unlocked already
+    syncAchievementsSilent();
     refreshMuteIcon();
     updateIslandBar();
     // Tutorial only for brand-new players
@@ -3724,7 +4114,7 @@
     const dt = Math.min(now - last, 33) / 16.67;
     last = now;
 
-    if (state.started && !state.shopOpen && !state.miniGameOpen) {
+    if (state.started && !state.shopOpen && !state.miniGameOpen && !state.bookOpen) {
       updateBoat(dt);
       updateItems();
       checkIsland();
