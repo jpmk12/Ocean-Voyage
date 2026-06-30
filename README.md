@@ -1,8 +1,12 @@
 # 🌊 Ocean Voyage
 
+![Ocean Voyage — your boat sailing past Home Island with Grandma Moana waving, a wake trail behind, and an NPC ship in the distance](docs/thumbnail.png)
+
 A kid-friendly browser game inspired by Polynesian seafaring. Sail your outrigger canoe across a bright, painted ocean — collect treasures, befriend sea animals, complete Grandma Moana's quests, paint your boat, defeat a giant crab, and watch the world cycle from sunny day to starry night.
 
 Built for a 4-year-old who's still learning to read, with on-screen joystick, voice narration, magnet pickup, and a story that pulls her through every system.
+
+> Want to regenerate the thumbnail? `node scripts/thumbnail.js` (Playwright required) drives a headless browser through a short scene and saves `docs/thumbnail.png`.
 
 ---
 
